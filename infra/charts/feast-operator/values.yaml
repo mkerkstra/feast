@@ -9,7 +9,7 @@ global:
 operator:
   # Image configuration
   image:
-    repository: feast-operator
+    repository: quay.io/feastdev/feast-operator
     tag: 0.52.0
     pullPolicy: IfNotPresent
   
@@ -27,8 +27,8 @@ operator:
   
   # Environment variables
   env:
-    relatedImageFeatureServer: "feast:latest"
-    relatedImageCronJob: "origin-cli:latest"
+    relatedImageFeatureServer: "quay.io/feastdev/feature-server:0.52.0"
+    relatedImageCronJob: "quay.io/openshift/origin-cli:4.17"
   
   # Health check configuration
   healthcheck:
@@ -84,10 +84,8 @@ operator:
   # Pod labels
   podLabels: {}
   
-  # Additional arguments
-  args:
-    - --leader-elect
-    - --health-probe-bind-address=:8081
+  # Additional arguments (beyond the auto-generated ones)
+  args: []
 
 # Service account configuration
 serviceAccount:
@@ -133,3 +131,29 @@ commonLabels: {}
 
 # Additional annotations to add to all resources
 commonAnnotations: {}
+
+# Name prefix for all resources (matches kustomize namePrefix)
+namePrefix: "feast-operator-"
+
+# Enable Prometheus monitoring
+prometheus:
+  # Install ServiceMonitor for Prometheus Operator
+  serviceMonitor:
+    enabled: false
+    # Additional labels for ServiceMonitor
+    labels: {}
+    # Scrape interval
+    interval: 30s
+    # Scrape timeout
+    timeout: 10s
+
+# Advanced configuration options
+advanced:
+  # Enable leader election (should always be true for production)
+  leaderElection: true
+  # Metrics bind address (HTTPS)
+  metricsBindAddress: ":8443"
+  # Health probe bind address
+  healthProbeBindAddress: ":8081"
+  # Termination grace period in seconds
+  terminationGracePeriodSeconds: 10

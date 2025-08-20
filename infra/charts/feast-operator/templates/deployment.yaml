@@ -57,6 +57,11 @@ spec:
         command:
         - /manager
         args:
+        {{- if .Values.advanced.leaderElection }}
+        - --leader-elect
+        {{- end }}
+        - --health-probe-bind-address={{ .Values.advanced.healthProbeBindAddress }}
+        - --metrics-bind-address={{ .Values.advanced.metricsBindAddress }}
         {{- with .Values.operator.args }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -89,4 +94,4 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-      terminationGracePeriodSeconds: 10
+      terminationGracePeriodSeconds: {{ .Values.advanced.terminationGracePeriodSeconds }}
