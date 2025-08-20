@@ -53,9 +53,9 @@ entries:
       artifacthub.io/prerelease: "false"
     apiVersion: v2
     appVersion: 0.52.0
-    created: "2025-08-20T00:16:32.620182-05:00"
+    created: "2025-08-20T00:34:10.199647-05:00"
     description: A Kubernetes operator for managing Feast feature stores
-    digest: 8357a072c0fcc653826ffb6e66a85ec206034707c056304ca7336c8e27aa1e24
+    digest: 3221bfae6f8588408e034e31046588223cbf1cdd91ac2c4f3868b189ab2d66fa
     home: https://feast.dev/
     icon: https://raw.githubusercontent.com/feast-dev/feast/master/docs/assets/feast_logo.png
     keywords:
@@ -81,4 +81,4 @@ entries:
     urls:
     - https://mkerkstra.github.io/feast/feast-operator-0.52.0.tgz
     version: 0.52.0
-generated: "2025-08-20T00:16:32.617205-05:00"
+generated: "2025-08-20T00:34:10.196364-05:00"
