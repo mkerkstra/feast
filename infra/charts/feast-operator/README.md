@@ -159,157 +159,181 @@ helm delete feast-operator
 
 > **Note:** This will remove all Kubernetes resources created by the chart. FeatureStore custom resources will be cleaned up automatically.
 
-## Configuration
+## 📋 Configuration
 
-The following table lists the configurable parameters of the Feast Operator chart and their default values.
+### Operator Configuration
+
+The following table lists the main configurable parameters of the Feast Operator:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `operator.image.repository` | Operator image repository | `feast-operator` |
-| `operator.image.tag` | Operator image tag | `latest` |
-| `operator.image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `operator.image.repository` | Operator image repository | `quay.io/feastdev/feast-operator` |
+| `operator.image.tag` | Operator image tag | `0.52.0` |
 | `operator.replicaCount` | Number of operator replicas | `1` |
 | `operator.resources.limits.cpu` | CPU limit | `1000m` |
 | `operator.resources.limits.memory` | Memory limit | `256Mi` |
-| `operator.resources.requests.cpu` | CPU request | `10m` |
-| `operator.resources.requests.memory` | Memory request | `64Mi` |
-| `operator.env.relatedImageFeatureServer` | Feature server image | `feast:latest` |
-| `operator.env.relatedImageCronJob` | Cron job image | `origin-cli:latest` |
-| `serviceAccount.create` | Create service account | `true` |
-| `serviceAccount.annotations` | Service account annotations | `{}` |
-| `rbac.create` | Create RBAC resources | `true` |
+| `namePrefix` | Resource name prefix (matches kustomize) | `feast-operator-` |
 | `metrics.enabled` | Enable metrics service | `true` |
-| `metrics.service.type` | Metrics service type | `ClusterIP` |
-| `metrics.service.port` | Metrics service port | `8443` |
-| `namespace.create` | Create namespace | `true` |
-| `namespace.name` | Namespace name | `""` (uses Release.Namespace) |
-| `crds.install` | Install CRDs | `true` |
+| `prometheus.serviceMonitor.enabled` | Create ServiceMonitor for Prometheus | `false` |
 
-Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example:
+### FeatureStore Configuration
 
-```bash
-helm install feast-operator ./feast-operator \
-  --set operator.image.tag=v0.52.0 \
-  --set operator.replicaCount=2
-```
+This chart can optionally deploy example FeatureStore custom resources. The configuration supports all major Feast deployment patterns:
 
-Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example:
+#### 🗂️ Registry Types
+- **Local**: File-based (SQLite) or cloud storage (GCS, S3)
+- **SQL**: PostgreSQL, MySQL, or other SQL databases
+- **Remote**: Reference to another FeatureStore or HTTP endpoint
 
-```bash
-helm install feast-operator ./feast-operator -f values.yaml
-```
+#### 🏪 Online Store Backends
+- **File**: SQLite for development
+- **Redis**: High-performance in-memory store
+- **DynamoDB**: AWS managed NoSQL
+- **Bigtable**: Google Cloud's NoSQL service
+- **PostgreSQL**: SQL-based online store
+- **Cassandra**: Distributed NoSQL database
 
-## Examples
+#### 📊 Offline Store Backends
+- **File**: DuckDB, Parquet files for development
+- **BigQuery**: Google Cloud data warehouse
+- **Snowflake**: Cloud data platform
+- **Redshift**: Amazon data warehouse
+- **Spark**: Distributed data processing
+- **PostgreSQL**: SQL-based offline store
 
-### Basic Installation
+#### ⚡ Compute Engines
+- **Local**: Basic Python transformations
+- **Spark**: Distributed data processing
+- **AWS Lambda**: Serverless compute
+- **Ray**: Distributed Python compute
+- **Snowflake**: In-database transformations
 
-```bash
-helm install feast-operator ./feast-operator
-```
+### Example Configurations
 
-### Custom Image
-
-```bash
-helm install feast-operator ./feast-operator \
-  --set operator.image.repository=my-registry/feast-operator \
-  --set operator.image.tag=v0.52.0
-```
-
-### Disable CRD Installation
-
-If you want to install CRDs separately:
-
-```bash
-helm install feast-operator ./feast-operator --set crds.install=false
-```
-
-### Custom Resource Limits
-
-```bash
-helm install feast-operator ./feast-operator \
-  --set operator.resources.limits.cpu=2000m \
-  --set operator.resources.limits.memory=512Mi
-```
-
-## Creating a FeatureStore
-
-After installing the operator, you can create a FeatureStore custom resource:
-
+#### GCP Deployment with BigQuery + Bigtable
 ```yaml
-apiVersion: feast.dev/v1alpha1
-kind: FeatureStore
-metadata:
-  name: sample-feast
-spec:
-  feastProject: my-project
+featureStore:
+  enabled: true
+  services:
+    offlineStore:
+      enabled: true
+      persistence:
+        store:
+          enabled: true
+          type: "bigquery"
+          secretRef:
+            name: "gcp-config"
+    onlineStore:
+      enabled: true
+      persistence:
+        store:
+          enabled: true
+          type: "bigtable"
+          secretRef:
+            name: "gcp-config"
+    registry:
+      local:
+        enabled: true
+        persistence:
+          file:
+            enabled: true
+            cloudPath: "gs://my-bucket/registry.pb"
 ```
 
-Apply this configuration:
+#### AWS Deployment with DynamoDB
+```yaml
+featureStore:
+  enabled: true
+  services:
+    onlineStore:
+      enabled: true
+      persistence:
+        store:
+          enabled: true
+          type: "dynamodb"
+          secretRef:
+            name: "aws-config"
+    registry:
+      local:
+        enabled: true
+        persistence:
+          file:
+            enabled: true
+            cloudPath: "s3://my-bucket/registry.pb"
+```
+
+#### Development with Persistence
+```yaml
+featureStore:
+  enabled: true
+  quickStart:
+    withPersistence: true
+    disableTLS: true
+  services:
+    onlineStore:
+      enabled: true
+    ui:
+      enabled: true
+```
+
+For complete configuration options, see the [values.yaml](./values.yaml) file.
+
+## 🚀 Advanced Examples
+
+### Enterprise Deployment with External Database
 
 ```bash
-kubectl apply -f featurestore.yaml
+helm install feast-operator feast-operator/feast-operator \
+  --set featureStore.enabled=true \
+  --set featureStore.services.onlineStore.persistence.store.enabled=true \
+  --set featureStore.services.onlineStore.persistence.store.type=postgres \
+  --set featureStore.services.onlineStore.persistence.store.secretRef.name=database-config \
+  --set featureStore.services.registry.local.persistence.store.enabled=true \
+  --set featureStore.services.registry.local.persistence.store.type=sql \
+  --set featureStore.authz.oidc.enabled=true \
+  --set featureStore.authz.oidc.secretRef.name=oidc-config
 ```
 
-## Troubleshooting
-
-### Check Operator Status
+### Multi-Cluster Registry Setup
 
 ```bash
-kubectl get deployment feast-operator-controller-manager
+# Primary cluster (registry server)
+helm install feast-operator feast-operator/feast-operator \
+  --set featureStore.enabled=true \
+  --set featureStore.services.registry.local.server.enabled=true
+
+# Secondary cluster (registry client)
+helm install feast-operator feast-operator/feast-operator \
+  --set featureStore.enabled=true \
+  --set featureStore.services.registry.remote.enabled=true \
+  --set featureStore.services.registry.remote.endpoint="https://registry.primary-cluster.com"
 ```
 
-### View Operator Logs
+### Development with Git-based Feature Repository
 
 ```bash
-kubectl logs deployment/feast-operator-controller-manager
+helm install feast-operator feast-operator/feast-operator \
+  --set featureStore.enabled=true \
+  --set featureStore.feastProjectDir.git.enabled=true \
+  --set featureStore.feastProjectDir.git.url="https://github.com/myorg/feature-repo.git" \
+  --set featureStore.feastProjectDir.git.ref="main" \
+  --set featureStore.quickStart.disableTLS=true
 ```
 
-### Check FeatureStore Status
+## 🤝 Contributing
 
-```bash
-kubectl get featurestores
-kubectl describe featurestore sample-feast
-```
-
-## 📚 Additional Resources
-
-- **[Feast Documentation](https://docs.feast.dev/)** - Complete documentation for Feast
-- **[Operator Documentation](https://github.com/feast-dev/feast/tree/master/infra/feast-operator)** - Feast Operator specific docs
-- **[Community Slack](https://slack.feast.dev/)** - Join the Feast community discussions
-- **[Blog & Tutorials](https://feast.dev/blog/)** - Learn from real-world examples
-
-## 🔄 Version Compatibility
-
-| Helm Chart Version | Feast Version | Kubernetes Version |
-|-------------------|---------------|-------------------|
-| 0.52.x | 0.52.x | 1.19+ |
-
-## 🏷️ Versioning
-
-This chart follows [Semantic Versioning](https://semver.org/). Version numbers are synchronized with Feast releases.
+Contributions are welcome! Please read our [Contributing Guide](https://github.com/feast-dev/feast/blob/master/CONTRIBUTING.md) for details on how to submit pull requests, report issues, and contribute to the project.
 
 ## 📄 License
 
-This Helm chart is licensed under the [Apache 2.0 License](https://github.com/feast-dev/feast/blob/master/LICENSE).
+This project is licensed under the Apache License 2.0 - see the [LICENSE](https://github.com/feast-dev/feast/blob/master/LICENSE) file for details.
 
-## Contributing
+## 🆘 Support
 
-We welcome contributions! Please see the [Feast contributing guide](https://docs.feast.dev/contributing/development-guide) for details on how to contribute to this project.
-
-### Reporting Issues
-
-Found a bug? Please file an issue in the [Feast repository](https://github.com/feast-dev/feast/issues) with:
-- Chart version
-- Kubernetes version
-- Helm version
-- Steps to reproduce
-
-## Support
-
-For support, please:
-1. 📖 Check the [documentation](https://docs.feast.dev/)
-2. 💬 Join our [Slack community](https://slack.feast.dev/)
-3. 🐛 File an issue on [GitHub](https://github.com/feast-dev/feast/issues)
+- 📖 [Documentation](https://docs.feast.dev/)
+- 💬 [Community Slack](https://join.slack.com/t/feastopensource/shared_invite/zt-1jw6dcmgt-8LCPn8T5XVHWYb~R~VG2BA)
+- 🐛 [GitHub Issues](https://github.com/feast-dev/feast/issues)
+- 📧 [Mailing List](https://groups.google.com/g/feast-discuss)
 
 ---
 

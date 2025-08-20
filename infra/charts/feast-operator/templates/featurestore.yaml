@@ -12,70 +12,258 @@ metadata:
   {{- end }}
 spec:
   feastProject: {{ .Values.featureStore.feastProject }}
-  {{- if or .Values.featureStore.services.onlineStore.enabled .Values.featureStore.services.offlineStore.enabled .Values.featureStore.services.registry.enabled .Values.featureStore.services.ui.enabled }}
+  
+  {{- if or .Values.featureStore.feastProjectDir.git.enabled .Values.featureStore.feastProjectDir.init.enabled }}
+  feastProjectDir:
+    {{- if .Values.featureStore.feastProjectDir.git.enabled }}
+    git:
+      url: {{ .Values.featureStore.feastProjectDir.git.url | quote }}
+      {{- with .Values.featureStore.feastProjectDir.git.ref }}
+      ref: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.featureStore.feastProjectDir.git.featureRepoPath }}
+      featureRepoPath: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.featureStore.feastProjectDir.git.configs }}
+      configs:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.featureStore.feastProjectDir.git.env }}
+      env:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.featureStore.feastProjectDir.git.envFrom }}
+      envFrom:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else if .Values.featureStore.feastProjectDir.init.enabled }}
+    init:
+      minimal: {{ .Values.featureStore.feastProjectDir.init.minimal }}
+      {{- with .Values.featureStore.feastProjectDir.init.template }}
+      template: {{ . | quote }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  
+  {{- if or .Values.featureStore.services.onlineStore.enabled .Values.featureStore.services.offlineStore.enabled .Values.featureStore.services.registry.local.enabled .Values.featureStore.services.registry.remote.enabled .Values.featureStore.services.ui.enabled .Values.featureStore.services.computeEngine.enabled }}
   services:
     {{- if .Values.featureStore.services.onlineStore.enabled }}
     onlineStore:
-      {{- if .Values.featureStore.quickStart.disableTLS }}
+      {{- if or .Values.featureStore.services.onlineStore.server.enabled .Values.featureStore.quickStart.disableTLS }}
       server:
+        {{- if or .Values.featureStore.quickStart.disableTLS .Values.featureStore.services.onlineStore.server.tls.disable }}
         tls:
           disable: true
+        {{- end }}
+        {{- with .Values.featureStore.services.onlineStore.server.env }}
+        env:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.featureStore.services.onlineStore.server.envFrom }}
+        envFrom:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.featureStore.services.onlineStore.server.volumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
-      {{- if .Values.featureStore.quickStart.withPersistence }}
+      {{- if or .Values.featureStore.services.onlineStore.persistence.file.enabled .Values.featureStore.services.onlineStore.persistence.store.enabled .Values.featureStore.quickStart.withPersistence }}
       persistence:
+        {{- if or .Values.featureStore.services.onlineStore.persistence.file.enabled .Values.featureStore.quickStart.withPersistence }}
         file:
-          path: online_store.db
+          path: {{ .Values.featureStore.services.onlineStore.persistence.file.path | quote }}
+          {{- if or .Values.featureStore.services.onlineStore.persistence.file.pvc.create.enabled .Values.featureStore.quickStart.withPersistence }}
           pvc:
+            {{- if .Values.featureStore.services.onlineStore.persistence.file.pvc.ref.name }}
+            ref:
+              name: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.ref.name | quote }}
+            {{- else }}
             create:
+              {{- with .Values.featureStore.services.onlineStore.persistence.file.pvc.create.storageClassName }}
+              storageClassName: {{ . | quote }}
+              {{- end }}
               resources:
                 requests:
-                  storage: 5Gi
-            mountPath: /data/online
+                  storage: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.create.resources.requests.storage | quote }}
+            {{- end }}
+            mountPath: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.mountPath | quote }}
+          {{- end }}
+        {{- else if .Values.featureStore.services.onlineStore.persistence.store.enabled }}
+        store:
+          type: {{ .Values.featureStore.services.onlineStore.persistence.store.type | quote }}
+          secretRef:
+            name: {{ .Values.featureStore.services.onlineStore.persistence.store.secretRef.name | quote }}
+            {{- with .Values.featureStore.services.onlineStore.persistence.store.secretRef.key }}
+            key: {{ . | quote }}
+            {{- end }}
+        {{- end }}
       {{- end }}
     {{- end }}
+    
     {{- if .Values.featureStore.services.offlineStore.enabled }}
     offlineStore:
-      {{- if .Values.featureStore.quickStart.disableTLS }}
+      {{- if or .Values.featureStore.services.offlineStore.server.enabled .Values.featureStore.quickStart.disableTLS }}
       server:
+        {{- if or .Values.featureStore.quickStart.disableTLS .Values.featureStore.services.offlineStore.server.tls.disable }}
         tls:
           disable: true
+        {{- end }}
+        {{- with .Values.featureStore.services.offlineStore.server.env }}
+        env:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.featureStore.services.offlineStore.server.envFrom }}
+        envFrom:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.featureStore.services.offlineStore.server.volumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
       {{- end }}
-      {{- if .Values.featureStore.quickStart.withPersistence }}
+      {{- if or .Values.featureStore.services.offlineStore.persistence.file.enabled .Values.featureStore.services.offlineStore.persistence.store.enabled .Values.featureStore.quickStart.withPersistence }}
       persistence:
+        {{- if or .Values.featureStore.services.offlineStore.persistence.file.enabled .Values.featureStore.quickStart.withPersistence }}
         file:
-          type: duckdb
+          type: {{ .Values.featureStore.services.offlineStore.persistence.file.type | quote }}
+          {{- if .Values.featureStore.services.offlineStore.persistence.file.pvc.create.enabled }}
           pvc:
             create:
+              {{- with .Values.featureStore.services.offlineStore.persistence.file.pvc.create.storageClassName }}
+              storageClassName: {{ . | quote }}
+              {{- end }}
               resources:
                 requests:
-                  storage: 10Gi
-            mountPath: /data/offline
+                  storage: {{ .Values.featureStore.services.offlineStore.persistence.file.pvc.create.resources.requests.storage | quote }}
+            mountPath: {{ .Values.featureStore.services.offlineStore.persistence.file.pvc.mountPath | quote }}
+          {{- end }}
+        {{- else if .Values.featureStore.services.offlineStore.persistence.store.enabled }}
+        store:
+          type: {{ .Values.featureStore.services.offlineStore.persistence.store.type | quote }}
+          secretRef:
+            name: {{ .Values.featureStore.services.offlineStore.persistence.store.secretRef.name | quote }}
+            {{- with .Values.featureStore.services.offlineStore.persistence.store.secretRef.key }}
+            key: {{ . | quote }}
+            {{- end }}
+        {{- end }}
       {{- end }}
     {{- end }}
-    {{- if .Values.featureStore.services.registry.enabled }}
+    
+    {{- if .Values.featureStore.services.registry.local.enabled }}
     registry:
       local:
-        {{- if .Values.featureStore.quickStart.disableTLS }}
+        {{- if or .Values.featureStore.services.registry.local.server.enabled .Values.featureStore.quickStart.disableTLS }}
         server:
+          {{- if or .Values.featureStore.quickStart.disableTLS .Values.featureStore.services.registry.local.server.tls.disable }}
           tls:
             disable: true
+          {{- end }}
         {{- end }}
-        {{- if .Values.featureStore.quickStart.withPersistence }}
+        {{- if or .Values.featureStore.services.registry.local.persistence.file.enabled .Values.featureStore.services.registry.local.persistence.store.enabled .Values.featureStore.quickStart.withPersistence }}
         persistence:
+          {{- if or .Values.featureStore.services.registry.local.persistence.file.enabled .Values.featureStore.quickStart.withPersistence }}
           file:
-            path: registry.db
+            {{- if .Values.featureStore.services.registry.local.persistence.file.cloudPath }}
+            path: {{ .Values.featureStore.services.registry.local.persistence.file.cloudPath | quote }}
+            {{- else }}
+            path: {{ .Values.featureStore.services.registry.local.persistence.file.path | quote }}
+            {{- if .Values.featureStore.services.registry.local.persistence.file.pvc.create.enabled }}
             pvc:
               create:
                 resources:
                   requests:
-                    storage: 1Gi
-              mountPath: /data/registry
+                    storage: {{ .Values.featureStore.services.registry.local.persistence.file.pvc.create.resources.requests.storage | quote }}
+              mountPath: {{ .Values.featureStore.services.registry.local.persistence.file.pvc.mountPath | quote }}
+            {{- end }}
+            {{- end }}
+          {{- else if .Values.featureStore.services.registry.local.persistence.store.enabled }}
+          store:
+            type: {{ .Values.featureStore.services.registry.local.persistence.store.type | quote }}
+            secretRef:
+              name: {{ .Values.featureStore.services.registry.local.persistence.store.secretRef.name | quote }}
+              {{- with .Values.featureStore.services.registry.local.persistence.store.secretRef.key }}
+              key: {{ . | quote }}
+              {{- end }}
+          {{- end }}
+        {{- end }}
+    {{- else if .Values.featureStore.services.registry.remote.enabled }}
+    registry:
+      remote:
+        {{- if .Values.featureStore.services.registry.remote.feastRef.name }}
+        feastRef:
+          name: {{ .Values.featureStore.services.registry.remote.feastRef.name | quote }}
+          {{- with .Values.featureStore.services.registry.remote.feastRef.namespace }}
+          namespace: {{ . | quote }}
+          {{- end }}
+        {{- else if .Values.featureStore.services.registry.remote.endpoint }}
+        endpoint: {{ .Values.featureStore.services.registry.remote.endpoint | quote }}
         {{- end }}
     {{- end }}
+    
     {{- if .Values.featureStore.services.ui.enabled }}
     ui: {}
     {{- end }}
+    
+    {{- if .Values.featureStore.services.computeEngine.enabled }}
+    computeEngine:
+      type: {{ .Values.featureStore.services.computeEngine.type | quote }}
+      {{- with .Values.featureStore.services.computeEngine.config }}
+      config:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    
+    {{- with .Values.featureStore.volumes }}
+    volumes:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   {{- end }}
+  
+  {{- if or .Values.featureStore.authz.kubernetes.enabled .Values.featureStore.authz.oidc.enabled }}
+  authz:
+    {{- if .Values.featureStore.authz.kubernetes.enabled }}
+    kubernetes:
+      secretRef:
+        name: {{ .Values.featureStore.authz.kubernetes.secretRef.name | quote }}
+    {{- else if .Values.featureStore.authz.oidc.enabled }}
+    oidc:
+      secretRef:
+        name: {{ .Values.featureStore.authz.oidc.secretRef.name | quote }}
+    {{- end }}
+  {{- end }}
+  
+  {{- if .Values.featureStore.cronJob.enabled }}
+  cronJob:
+    schedule: {{ .Values.featureStore.cronJob.schedule | quote }}
+    {{- with .Values.featureStore.cronJob.timeZone }}
+    timeZone: {{ . | quote }}
+    {{- end }}
+    {{- with .Values.featureStore.cronJob.startingDeadlineSeconds }}
+    startingDeadlineSeconds: {{ . }}
+    {{- end }}
+    concurrencyPolicy: {{ .Values.featureStore.cronJob.concurrencyPolicy | quote }}
+    suspend: {{ .Values.featureStore.cronJob.suspend }}
+    successfulJobsHistoryLimit: {{ .Values.featureStore.cronJob.successfulJobsHistoryLimit }}
+    failedJobsHistoryLimit: {{ .Values.featureStore.cronJob.failedJobsHistoryLimit }}
+    jobSpec:
+      parallelism: {{ .Values.featureStore.cronJob.jobSpec.parallelism }}
+      completions: {{ .Values.featureStore.cronJob.jobSpec.completions }}
+      activeDeadlineSeconds: {{ .Values.featureStore.cronJob.jobSpec.activeDeadlineSeconds }}
+      backoffLimit: {{ .Values.featureStore.cronJob.jobSpec.backoffLimit }}
+    {{- with .Values.featureStore.cronJob.containerConfigs }}
+    containerConfigs:
+      {{- with .env }}
+      env:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .resources }}
+      resources:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  
   {{- with .Values.featureStore.config.custom }}
   {{- toYaml . | nindent 2 }}
   {{- end }}

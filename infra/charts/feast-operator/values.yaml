@@ -166,30 +166,192 @@ featureStore:
   # FeatureStore configuration
   name: "sample"
   feastProject: "my_project"
-  # Services to enable
+  
+  # Feast project directory configuration
+  feastProjectDir:
+    # Git clone configuration
+    git:
+      enabled: false
+      url: ""
+      ref: ""
+      featureRepoPath: "feature_repo"
+      configs: {}
+      env: []
+      envFrom: []
+    # Init configuration
+    init:
+      enabled: false
+      minimal: true
+      # local, gcp, aws, snowflake, spark, postgres, hbase, cassandra, hazelcast, ikv, couchbase, clickhouse
+      template: "local"
+  
+  # Services configuration
   services:
-    # Enable online store server
+    # Online Store configuration
     onlineStore:
       enabled: true
-    # Enable offline store server  
+      server:
+        enabled: false
+        tls:
+          disable: false
+        env: []
+        envFrom: []
+        volumeMounts: []
+      persistence:
+        # File-based persistence
+        file:
+          enabled: false
+          path: "online_store.db"
+          pvc:
+            ref:
+              name: ""
+            mountPath: "/data/online"
+            create:
+              enabled: false
+              storageClassName: ""
+              resources:
+                requests:
+                  storage: "5Gi"
+        # Store-based persistence (Redis, DynamoDB, etc)
+        store:
+          enabled: false
+          # redis, dynamodb, postgres, bigtable, cassandra, etc
+          type: ""
+          secretRef:
+            name: ""
+            key: ""
+    
+    # Offline Store configuration  
     offlineStore:
       enabled: false
-    # Enable registry server
+      server:
+        enabled: false
+        tls:
+          disable: false
+        env: []
+        envFrom: []
+        volumeMounts: []
+      persistence:
+        file:
+          enabled: false
+          # duckdb, parquet
+          type: "duckdb"
+          pvc:
+            mountPath: "/data/offline"
+            create:
+              enabled: false
+              storageClassName: ""
+              resources:
+                requests:
+                  storage: "10Gi"
+        store:
+          enabled: false
+          # bigquery, snowflake, redshift, spark, postgres, trino, etc
+          type: ""
+          secretRef:
+            name: ""
+            key: ""
+    
+    # Registry configuration
     registry:
-      enabled: true
-    # Enable Feast UI
+      # Local registry
+      local:
+        enabled: true
+        server:
+          enabled: false
+          tls:
+            disable: false
+        persistence:
+          file:
+            enabled: true
+            path: "registry.db"
+            # File path for cloud storage (gs://, s3://, etc)
+            cloudPath: ""
+            pvc:
+              mountPath: "/data/registry"
+              create:
+                enabled: false
+                resources:
+                  requests:
+                    storage: "1Gi"
+          store:
+            enabled: false
+            # sql, snowflake
+            type: ""
+            secretRef:
+              name: ""
+              key: ""
+      # Remote registry reference
+      remote:
+        enabled: false
+        # Reference to another FeatureStore in same cluster
+        feastRef:
+          name: ""
+          namespace: ""
+        # Or HTTP(S) endpoint
+        endpoint: ""
+    
+    # Feast UI
     ui:
       enabled: false
-  # Advanced FeatureStore configuration
+    
+    # Transform engine / compute engine
+    computeEngine:
+      enabled: false
+      # local, spark, lambda, ray, snowflake
+      type: "local"
+      config: {}
+  
+  # Authorization configuration
+  authz:
+    # Kubernetes RBAC
+    kubernetes:
+      enabled: false
+      secretRef:
+        name: ""
+    # OIDC authentication
+    oidc:
+      enabled: false
+      secretRef:
+        name: ""
+  
+  # CronJob configuration for materialization
+  cronJob:
+    enabled: false
+    schedule: "0 */6 * * *"
+    timeZone: ""
+    startingDeadlineSeconds: 600
+    concurrencyPolicy: "Forbid"
+    suspend: false
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 1
+    jobSpec:
+      parallelism: 1
+      completions: 1
+      activeDeadlineSeconds: 3600
+      backoffLimit: 3
+    containerConfigs:
+      env: []
+      resources: {}
+  
+  # Volumes and volume mounts
+  volumes: []
+  
+  # Additional configuration
   config:
-    # Custom feast configuration (YAML)
-    # This will be mounted as feature_store.yaml
+    # Custom feast configuration (raw YAML)
     custom: {}
-  # Example: quick start templates for common scenarios
+  
+  # Quick start templates for common scenarios
   quickStart:
     # Deploy with persistent volumes
     withPersistence: false
-    # Deploy with external database
+    # Deploy with external database  
     withDatabase: false
     # Deploy with TLS disabled (development only)
     disableTLS: false
+    # Template-based deployment
+    template:
+      enabled: false
+      # local, gcp, aws, snowflake, spark, postgres
+      type: "local"
