@@ -168,214 +168,99 @@ advanced:
   # Termination grace period in seconds
   terminationGracePeriodSeconds: 10
 
-# Example FeatureStore deployment (optional)
-# Deploys a basic FeatureStore CR for quick start
-featureStore:
-  # Enable deployment of example FeatureStore
+# Example FeatureStore deployments (optional)
+# Deploys multiple FeatureStore CRs for different use cases
+featureStores:
+  # Enable deployment of FeatureStores
   enabled: false
-  # FeatureStore configuration
-  name: "sample"
-  feastProject: "my_project"
   
-  # Feast project directory configuration
-  feastProjectDir:
-    # Git clone configuration
-    git:
-      enabled: false
-      url: ""
-      ref: ""
-      featureRepoPath: "feature_repo"
-      configs: {}
-      env: []
-      envFrom: []
-    # Init configuration
-    init:
-      enabled: false
-      minimal: true
-      # local, gcp, aws, snowflake, spark, postgres, hbase, cassandra, hazelcast, ikv, couchbase, clickhouse
-      template: "local"
-  
-  # Services configuration
-  services:
-    # Online Store configuration
-    onlineStore:
-      enabled: true
-      server:
-        enabled: false
-        tls:
-          disable: false
-        env: []
-        envFrom: []
-        volumeMounts: []
-      persistence:
-        # File-based persistence
-        file:
-          enabled: false
-          path: "online_store.db"
-          pvc:
-            ref:
-              name: ""
-            mountPath: "/data/online"
-            create:
-              enabled: false
-              storageClassName: ""  # Uses storage.defaultStorageClass if empty
-              accessModes: []  # Uses storage.defaultAccessModes if empty
-              resources:
-                requests:
-                  storage: "5Gi"
-              # Optional annotations for storage behavior
-              annotations: {}
-        # Store-based persistence (Redis, DynamoDB, etc)
-        store:
-          enabled: false
-          # redis, dynamodb, postgres, bigtable, cassandra, etc
-          type: ""
-          secretRef:
-            name: ""
-            # Key in secret containing store config (e.g., 'redis', 'postgres', 'dynamodb')
-            # If empty, defaults to the store type
-            key: ""
+  # FeatureStore configurations (object-based for easier Helm overrides)
+  sample:
+    enabled: true  # Enable this specific FeatureStore
+    feastProject: "my_project"
     
-    # Offline Store configuration  
-    offlineStore:
-      enabled: false
-      server:
+    # Quick start configurations
+    quickStart:
+      withPersistence: false
+      disableTLS: false
+      template:
         enabled: false
-        tls:
-          disable: false
-        env: []
-        envFrom: []
-        volumeMounts: []
-      persistence:
-        file:
-          enabled: false
-          # duckdb, parquet
-          type: "duckdb"
-          pvc:
-            mountPath: "/data/offline"
-            create:
-              enabled: false
-              storageClassName: ""  # Uses storage.defaultStorageClass if empty
-              accessModes: []  # Uses storage.defaultAccessModes if empty
-              resources:
-                requests:
-                  storage: "10Gi"
-              annotations: {}
-        store:
-          enabled: false
-          # bigquery, snowflake, redshift, spark, postgres, trino, etc
-          type: ""
-          secretRef:
-            name: ""
-            # Key in secret containing store config (e.g., 'bigquery', 'snowflake', 'postgres')
-            # If empty, defaults to the store type
-            key: ""
+        type: "local"
     
-    # Registry configuration
-    registry:
-      # Local registry
-      local:
+    # Services configuration
+    services:
+      onlineStore:
         enabled: true
-        server:
-          enabled: false
-          tls:
-            disable: false
-        persistence:
-          file:
-            enabled: true
-            path: "registry.db"
-            # File path for cloud storage (gs://, s3://, etc)
-            cloudPath: ""
-            pvc:
-              mountPath: "/data/registry"
-              create:
-                enabled: false
-                storageClassName: ""  # Uses storage.defaultStorageClass if empty
-                accessModes: []  # Uses storage.defaultAccessModes if empty
-                resources:
-                  requests:
-                    storage: "1Gi"
-                annotations: {}
-          store:
-            enabled: false
-            # sql, snowflake
-            type: ""
-            secretRef:
-              name: ""
-              # Key in secret containing registry config (e.g., 'sql', 'snowflake')
-              # If empty, defaults to the store type
-              key: ""
-      # Remote registry reference
-      remote:
+      registry:
+        local:
+          enabled: true
+      ui:
         enabled: false
-        # Reference to another FeatureStore in same cluster
-        feastRef:
-          name: ""
-          namespace: ""
-        # Or HTTP(S) endpoint
-        endpoint: ""
+  
+  # Production FeatureStore with external databases
+  production:
+    enabled: false  # Disabled by default
+    feastProject: "production"
     
-    # Feast UI
-    ui:
-      enabled: false
+    services:
+      onlineStore:
+        enabled: true
+        persistence:
+          store:
+            enabled: true
+            type: "postgres"
+            secretRef:
+              name: "feast-stores"
+      offlineStore:
+        enabled: true
+        persistence:
+          store:
+            enabled: true
+            type: "bigquery"
+            secretRef:
+              name: "feast-stores"
+      registry:
+        local:
+          enabled: true
+          persistence:
+            store:
+              enabled: true
+              type: "sql"
+              secretRef:
+                name: "feast-stores"
+      ui:
+        enabled: true
     
-    # Transform engine / compute engine
-    computeEngine:
-      enabled: false
-      # local, spark, lambda, ray, snowflake
-      type: "local"
-      config: {}
+    authz:
+      oidc:
+        enabled: true
+        secretRef:
+          name: "oidc-config"
   
-  # Authorization configuration
-  authz:
-    # Kubernetes RBAC
-    kubernetes:
-      enabled: false
-      secretRef:
-        name: ""
-    # OIDC authentication
-    oidc:
-      enabled: false
-      secretRef:
-        name: ""
-  
-  # CronJob configuration for materialization
-  cronJob:
-    enabled: false
-    schedule: "0 */6 * * *"
-    timeZone: ""
-    startingDeadlineSeconds: 600
-    concurrencyPolicy: "Forbid"
-    suspend: false
-    successfulJobsHistoryLimit: 3
-    failedJobsHistoryLimit: 1
-    jobSpec:
-      parallelism: 1
-      completions: 1
-      activeDeadlineSeconds: 3600
-      backoffLimit: 3
-    containerConfigs:
-      env: []
-      resources: {}
-  
-  # Volumes and volume mounts
-  volumes: []
-  
-  # Additional configuration
-  config:
-    # Custom feast configuration (raw YAML)
-    custom: {}
-  
-  # Quick start templates for common scenarios
-  quickStart:
-    # Deploy with persistent volumes
-    withPersistence: false
-    # Deploy with external database  
-    withDatabase: false
-    # Deploy with TLS disabled (development only)
-    disableTLS: false
-    # Template-based deployment
-    template:
-      enabled: false
-      # local, gcp, aws, snowflake, spark, postgres
-      type: "local"
+  # Development FeatureStore with Git repo
+  development:
+    enabled: false  # Disabled by default
+    feastProject: "development"
+    
+    feastProjectDir:
+      git:
+        enabled: true
+        url: "https://github.com/myorg/feature-repo.git"
+        ref: "main"
+    
+    quickStart:
+      disableTLS: true
+      
+    services:
+      onlineStore:
+        enabled: true
+      registry:
+        local:
+          enabled: true
+      ui:
+        enabled: true
+
+# Legacy single FeatureStore configuration (DEPRECATED - use featureStores instead)
+# This is maintained for backward compatibility and will be removed in a future version
+featureStore:
+  enabled: false

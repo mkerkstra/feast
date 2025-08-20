@@ -95,32 +95,31 @@ helm install feast-operator feast-operator/feast-operator
 kubectl apply -f my-featurestore.yaml
 ```
 
-### Option 2: All-in-One with Example FeatureStore
+### Option 2: Single FeatureStore Quick Start
 
 ```bash
 helm install feast-operator feast-operator/feast-operator \
-  --set featureStore.enabled=true \
-  --set featureStore.feastProject="production" \
-  --set featureStore.services.ui.enabled=true
+  --set featureStores.enabled=true \
+  --set featureStores.sample.enabled=true \
+  --set featureStores.sample.services.ui.enabled=true
 ```
 
-### Option 3: Production with Persistence
+### Option 3: Multiple FeatureStores for Different Environments
 
 ```bash
 helm install feast-operator feast-operator/feast-operator \
-  --set featureStore.enabled=true \
-  --set featureStore.quickStart.withPersistence=true \
-  --set featureStore.services.onlineStore.enabled=true \
-  --set featureStore.services.offlineStore.enabled=true
+  --set featureStores.enabled=true \
+  --set featureStores.sample.enabled=true \
+  --set featureStores.development.enabled=true \
+  --set featureStores.development.quickStart.disableTLS=true
 ```
 
-### Option 4: Development with TLS Disabled
+### Option 4: Production FeatureStore with External Database
 
 ```bash
 helm install feast-operator feast-operator/feast-operator \
-  --set featureStore.enabled=true \
-  --set featureStore.quickStart.disableTLS=true \
-  --set featureStore.services.ui.enabled=true
+  --set featureStores.enabled=true \
+  --set featureStores.production.enabled=true
 ```
 
 > **💡 Tip:** For production, manually create FeatureStore CRs with specific database connections, storage backends, and scaling configuration rather than using the built-in examples.
@@ -222,70 +221,119 @@ This chart can optionally deploy example FeatureStore custom resources. The conf
 
 ### Example Configurations
 
-#### GCP Deployment with BigQuery + Bigtable
+#### Multi-Environment Deployment
 ```yaml
-featureStore:
+featureStores:
   enabled: true
-  services:
-    offlineStore:
-      enabled: true
-      persistence:
-        store:
+  
+  # Development environment
+  development:
+    enabled: true
+    feastProject: "dev"
+    quickStart:
+      disableTLS: true
+    services:
+      onlineStore:
+        enabled: true
+      registry:
+        local:
           enabled: true
-          type: "bigquery"
-          secretRef:
-            name: "gcp-config"
-    onlineStore:
-      enabled: true
-      persistence:
-        store:
-          enabled: true
-          type: "bigtable"
-          secretRef:
-            name: "gcp-config"
-    registry:
-      local:
+      ui:
+        enabled: true
+  
+  # Staging environment
+  staging:
+    enabled: true
+    feastProject: "staging"
+    services:
+      onlineStore:
         enabled: true
         persistence:
-          file:
+          store:
             enabled: true
-            cloudPath: "gs://my-bucket/registry.pb"
-```
-
-#### AWS Deployment with DynamoDB
-```yaml
-featureStore:
-  enabled: true
-  services:
-    onlineStore:
-      enabled: true
-      persistence:
-        store:
+            type: "postgres"
+            secretRef:
+              name: "staging-db-config"
+      registry:
+        local:
           enabled: true
-          type: "dynamodb"
-          secretRef:
-            name: "aws-config"
-    registry:
-      local:
+          persistence:
+            store:
+              enabled: true
+              type: "sql"
+              secretRef:
+                name: "staging-db-config"
+  
+  # Production environment  
+  production:
+    enabled: true
+    feastProject: "production"
+    services:
+      onlineStore:
         enabled: true
         persistence:
-          file:
+          store:
             enabled: true
-            cloudPath: "s3://my-bucket/registry.pb"
+            type: "redis"
+            secretRef:
+              name: "production-redis-config"
+      offlineStore:
+        enabled: true
+        persistence:
+          store:
+            enabled: true
+            type: "bigquery"
+            secretRef:
+              name: "production-gcp-config"
+      registry:
+        local:
+          enabled: true
+          persistence:
+            file:
+              enabled: true
+              cloudPath: "gs://production-feast/registry.pb"
+      ui:
+        enabled: true
+    authz:
+      oidc:
+        enabled: true
+        secretRef:
+          name: "production-oidc-config"
 ```
 
-#### Development with Persistence
+#### Cross-Cluster Registry Setup
 ```yaml
-featureStore:
+featureStores:
   enabled: true
-  quickStart:
-    withPersistence: true
-    disableTLS: true
-  services:
-    onlineStore:
-      enabled: true
-    ui:
-      enabled: true
+  
+  # Central registry cluster
+  central-registry:
+    enabled: true
+    feastProject: "shared"
+    services:
+      registry:
+        local:
+          enabled: true
+          server:
+            enabled: true  # Expose registry service
+          persistence:
+            store:
+              enabled: true
+              type: "sql"
+              secretRef:
+                name: "shared-db-config"
+  
+  # Edge cluster that references central registry
+  edge-cluster:
+    enabled: true
+    feastProject: "edge"
+    services:
+      onlineStore:
+        enabled: true
+      registry:
+        remote:
+          enabled: true
+          endpoint: "https://central-registry.company.com"
 ```
 
 #### Production with Custom Storage Class
@@ -316,78 +364,88 @@ featureStore:
 
 #### Multi-Database Configuration with Smart SecretRefs
 ```yaml
-featureStore:
+featureStores:
   enabled: true
-  services:
-    onlineStore:
-      persistence:
-        store:
-          enabled: true
-          type: "postgres"
-          secretRef:
-            name: "feast-stores"
-            # key defaults to "postgres" (the store type)
-    offlineStore:
-      persistence:
-        store:
-          enabled: true
-          type: "bigquery"
-          secretRef:
-            name: "feast-stores"
-            # key defaults to "bigquery"
-    registry:
-      local:
+  
+  production:
+    enabled: true
+    feastProject: "production"
+    services:
+      onlineStore:
+        enabled: true
         persistence:
           store:
             enabled: true
-            type: "sql"
+            type: "postgres"
             secretRef:
               name: "feast-stores"
-              # key defaults to "sql"
+              # key defaults to "postgres" (the store type)
+      offlineStore:
+        enabled: true
+        persistence:
+          store:
+            enabled: true
+            type: "bigquery"
+            secretRef:
+              name: "feast-stores"
+              # key defaults to "bigquery"
+      registry:
+        local:
+          enabled: true
+          persistence:
+            store:
+              enabled: true
+              type: "sql"
+              secretRef:
+                name: "feast-stores"
+                # key defaults to "sql"
 ```
 
 For complete configuration options, see the [values.yaml](./values.yaml) file.
 
 ## 🚀 Advanced Examples
 
-### Enterprise Deployment with External Database
+### Multi-Environment Enterprise Deployment
 
 ```bash
 helm install feast-operator feast-operator/feast-operator \
-  --set featureStore.enabled=true \
-  --set featureStore.services.onlineStore.persistence.store.enabled=true \
-  --set featureStore.services.onlineStore.persistence.store.type=postgres \
-  --set featureStore.services.onlineStore.persistence.store.secretRef.name=database-config \
-  --set featureStore.services.registry.local.persistence.store.enabled=true \
-  --set featureStore.services.registry.local.persistence.store.type=sql \
-  --set featureStore.authz.oidc.enabled=true \
-  --set featureStore.authz.oidc.secretRef.name=oidc-config
+  --set featureStores.enabled=true \
+  --set featureStores.development.enabled=true \
+  --set featureStores.staging.enabled=true \
+  --set featureStores.production.enabled=true
 ```
 
-### Multi-Cluster Registry Setup
+### Single Production FeatureStore with External Database
 
 ```bash
-# Primary cluster (registry server)
 helm install feast-operator feast-operator/feast-operator \
-  --set featureStore.enabled=true \
-  --set featureStore.services.registry.local.server.enabled=true
-
-# Secondary cluster (registry client)
-helm install feast-operator feast-operator/feast-operator \
-  --set featureStore.enabled=true \
-  --set featureStore.services.registry.remote.enabled=true \
-  --set featureStore.services.registry.remote.endpoint="https://registry.primary-cluster.com"
+  --set featureStores.enabled=true \
+  --set featureStores.production.enabled=true \
+  --set featureStores.production.services.onlineStore.persistence.store.enabled=true \
+  --set featureStores.production.services.onlineStore.persistence.store.type=postgres \
+  --set featureStores.production.services.onlineStore.persistence.store.secretRef.name=database-config
 ```
 
-### Development with Git-based Feature Repository
+### Custom FeatureStore with Git Repository
 
 ```bash
 helm install feast-operator feast-operator/feast-operator \
-  --set featureStore.enabled=true \
-  --set featureStore.feastProjectDir.git.enabled=true \
-  --set featureStore.feastProjectDir.git.url="https://github.com/myorg/feature-repo.git" \
-  --set featureStore.feastProjectDir.git.ref="main" \
-  --set featureStore.quickStart.disableTLS=true
+  --set featureStores.enabled=true \
+  --set featureStores.custom.enabled=true \
+  --set featureStores.custom.feastProject=my-project \
+  --set featureStores.custom.feastProjectDir.git.enabled=true \
+  --set featureStores.custom.feastProjectDir.git.url="https://github.com/myorg/feature-repo.git"
+```
+
+### Enable Only Specific FeatureStores
+
+```bash
+# Enable only development FeatureStore
+helm install feast-operator feast-operator/feast-operator \
+  --set featureStores.enabled=true \
+  --set featureStores.sample.enabled=false \
+  --set featureStores.development.enabled=true \
+  --set featureStores.production.enabled=false
 ```
 
 ## 🤝 Contributing

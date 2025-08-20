@@ -1,110 +1,114 @@
-{{- if .Values.featureStore.enabled }}
+{{- if .Values.featureStores.enabled }}
+{{- range $name, $config := .Values.featureStores }}
+{{- if and (ne $name "enabled") $config.enabled }}
+---
 apiVersion: feast.dev/v1alpha1
 kind: FeatureStore
 metadata:
-  name: {{ .Values.featureStore.name }}
-  namespace: {{ include "feast-operator.namespace" . }}
+  name: {{ $name }}
+  namespace: {{ include "feast-operator.namespace" $ }}
   labels:
-    {{- include "feast-operator.labels" . | nindent 4 }}
-  {{- with (include "feast-operator.annotations" .) }}
+    {{- include "feast-operator.labels" $ | nindent 4 }}
+    feast.dev/featurestore: {{ $name | quote }}
+  {{- with (include "feast-operator.annotations" $) }}
   annotations:
     {{- . | nindent 4 }}
   {{- end }}
 spec:
-  feastProject: {{ .Values.featureStore.feastProject }}
+  feastProject: {{ $config.feastProject }}
   
-  {{- if or .Values.featureStore.feastProjectDir.git.enabled .Values.featureStore.feastProjectDir.init.enabled }}
+  {{- if or $config.feastProjectDir.git.enabled $config.feastProjectDir.init.enabled }}
   feastProjectDir:
-    {{- if .Values.featureStore.feastProjectDir.git.enabled }}
+    {{- if $config.feastProjectDir.git.enabled }}
     git:
-      url: {{ .Values.featureStore.feastProjectDir.git.url | quote }}
-      {{- with .Values.featureStore.feastProjectDir.git.ref }}
+      url: {{ $config.feastProjectDir.git.url | quote }}
+      {{- with $config.feastProjectDir.git.ref }}
       ref: {{ . | quote }}
       {{- end }}
-      {{- with .Values.featureStore.feastProjectDir.git.featureRepoPath }}
+      {{- with $config.feastProjectDir.git.featureRepoPath }}
       featureRepoPath: {{ . | quote }}
       {{- end }}
-      {{- with .Values.featureStore.feastProjectDir.git.configs }}
+      {{- with $config.feastProjectDir.git.configs }}
       configs:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.featureStore.feastProjectDir.git.env }}
+      {{- with $config.feastProjectDir.git.env }}
       env:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.featureStore.feastProjectDir.git.envFrom }}
+      {{- with $config.feastProjectDir.git.envFrom }}
       envFrom:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-    {{- else if .Values.featureStore.feastProjectDir.init.enabled }}
+    {{- else if $config.feastProjectDir.init.enabled }}
     init:
-      minimal: {{ .Values.featureStore.feastProjectDir.init.minimal }}
-      {{- with .Values.featureStore.feastProjectDir.init.template }}
+      minimal: {{ $config.feastProjectDir.init.minimal }}
+      {{- with $config.feastProjectDir.init.template }}
       template: {{ . | quote }}
       {{- end }}
     {{- end }}
   {{- end }}
   
-  {{- if or .Values.featureStore.services.onlineStore.enabled .Values.featureStore.services.offlineStore.enabled .Values.featureStore.services.registry.local.enabled .Values.featureStore.services.registry.remote.enabled .Values.featureStore.services.ui.enabled .Values.featureStore.services.computeEngine.enabled }}
+  {{- if or $config.services.onlineStore.enabled $config.services.offlineStore.enabled $config.services.registry.local.enabled $config.services.registry.remote.enabled $config.services.ui.enabled $config.services.computeEngine.enabled }}
   services:
-    {{- if .Values.featureStore.services.onlineStore.enabled }}
+    {{- if $config.services.onlineStore.enabled }}
     onlineStore:
-      {{- if or .Values.featureStore.services.onlineStore.server.enabled .Values.featureStore.quickStart.disableTLS }}
+      {{- if or $config.services.onlineStore.server.enabled $config.quickStart.disableTLS }}
       server:
-        {{- if or .Values.featureStore.quickStart.disableTLS .Values.featureStore.services.onlineStore.server.tls.disable }}
+        {{- if or $config.quickStart.disableTLS $config.services.onlineStore.server.tls.disable }}
         tls:
           disable: true
         {{- end }}
-        {{- with .Values.featureStore.services.onlineStore.server.env }}
+        {{- with $config.services.onlineStore.server.env }}
         env:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with .Values.featureStore.services.onlineStore.server.envFrom }}
+        {{- with $config.services.onlineStore.server.envFrom }}
         envFrom:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with .Values.featureStore.services.onlineStore.server.volumeMounts }}
+        {{- with $config.services.onlineStore.server.volumeMounts }}
         volumeMounts:
           {{- toYaml . | nindent 10 }}
         {{- end }}
       {{- end }}
-      {{- if or .Values.featureStore.services.onlineStore.persistence.file.enabled .Values.featureStore.services.onlineStore.persistence.store.enabled .Values.featureStore.quickStart.withPersistence }}
+      {{- if or $config.services.onlineStore.persistence.file.enabled $config.services.onlineStore.persistence.store.enabled $config.quickStart.withPersistence }}
       persistence:
-        {{- if or .Values.featureStore.services.onlineStore.persistence.file.enabled .Values.featureStore.quickStart.withPersistence }}
+        {{- if or $config.services.onlineStore.persistence.file.enabled $config.quickStart.withPersistence }}
         file:
-          path: {{ .Values.featureStore.services.onlineStore.persistence.file.path | quote }}
-          {{- if or .Values.featureStore.services.onlineStore.persistence.file.pvc.create.enabled .Values.featureStore.quickStart.withPersistence }}
+          path: {{ $config.services.onlineStore.persistence.file.path | default "online_store.db" | quote }}
+          {{- if or $config.services.onlineStore.persistence.file.pvc.create.enabled $config.quickStart.withPersistence }}
           pvc:
-            {{- if .Values.featureStore.services.onlineStore.persistence.file.pvc.ref.name }}
+            {{- if $config.services.onlineStore.persistence.file.pvc.ref.name }}
             ref:
-              name: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.ref.name | quote }}
+              name: {{ $config.services.onlineStore.persistence.file.pvc.ref.name | quote }}
             {{- else }}
             create:
-              {{- $storageClass := .Values.featureStore.services.onlineStore.persistence.file.pvc.create.storageClassName | default .Values.storage.defaultStorageClass }}
+              {{- $storageClass := $config.services.onlineStore.persistence.file.pvc.create.storageClassName | default $.Values.storage.defaultStorageClass }}
               {{- if $storageClass }}
               storageClassName: {{ $storageClass | quote }}
               {{- end }}
-              {{- $accessModes := .Values.featureStore.services.onlineStore.persistence.file.pvc.create.accessModes | default .Values.storage.defaultAccessModes }}
+              {{- $accessModes := $config.services.onlineStore.persistence.file.pvc.create.accessModes | default $.Values.storage.defaultAccessModes }}
               {{- if $accessModes }}
               accessModes:
                 {{- toYaml $accessModes | nindent 16 }}
               {{- end }}
               resources:
                 requests:
-                  storage: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.create.resources.requests.storage | quote }}
-              {{- with .Values.featureStore.services.onlineStore.persistence.file.pvc.create.annotations }}
+                  storage: {{ $config.services.onlineStore.persistence.file.pvc.create.resources.requests.storage | default "5Gi" | quote }}
+              {{- with $config.services.onlineStore.persistence.file.pvc.create.annotations }}
               annotations:
                 {{- toYaml . | nindent 16 }}
               {{- end }}
             {{- end }}
-            mountPath: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.mountPath | quote }}
+            mountPath: {{ $config.services.onlineStore.persistence.file.pvc.mountPath | default "/data/online" | quote }}
           {{- end }}
-        {{- else if .Values.featureStore.services.onlineStore.persistence.store.enabled }}
+        {{- else if $config.services.onlineStore.persistence.store.enabled }}
         store:
-          type: {{ .Values.featureStore.services.onlineStore.persistence.store.type | quote }}
+          type: {{ $config.services.onlineStore.persistence.store.type | quote }}
           secretRef:
-            name: {{ .Values.featureStore.services.onlineStore.persistence.store.secretRef.name | quote }}
-            {{- $secretKey := .Values.featureStore.services.onlineStore.persistence.store.secretRef.key | default .Values.featureStore.services.onlineStore.persistence.store.type }}
+            name: {{ $config.services.onlineStore.persistence.store.secretRef.name | quote }}
+            {{- $secretKey := $config.services.onlineStore.persistence.store.secretRef.key | default $config.services.onlineStore.persistence.store.type }}
             {{- if $secretKey }}
             key: {{ $secretKey | quote }}
             {{- end }}
@@ -112,59 +116,59 @@ spec:
       {{- end }}
     {{- end }}
     
-    {{- if .Values.featureStore.services.offlineStore.enabled }}
+    {{- if $config.services.offlineStore.enabled }}
     offlineStore:
-      {{- if or .Values.featureStore.services.offlineStore.server.enabled .Values.featureStore.quickStart.disableTLS }}
+      {{- if or $config.services.offlineStore.server.enabled $config.quickStart.disableTLS }}
       server:
-        {{- if or .Values.featureStore.quickStart.disableTLS .Values.featureStore.services.offlineStore.server.tls.disable }}
+        {{- if or $config.quickStart.disableTLS $config.services.offlineStore.server.tls.disable }}
         tls:
           disable: true
         {{- end }}
-        {{- with .Values.featureStore.services.offlineStore.server.env }}
+        {{- with $config.services.offlineStore.server.env }}
         env:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with .Values.featureStore.services.offlineStore.server.envFrom }}
+        {{- with $config.services.offlineStore.server.envFrom }}
         envFrom:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with .Values.featureStore.services.offlineStore.server.volumeMounts }}
+        {{- with $config.services.offlineStore.server.volumeMounts }}
         volumeMounts:
           {{- toYaml . | nindent 10 }}
         {{- end }}
       {{- end }}
-      {{- if or .Values.featureStore.services.offlineStore.persistence.file.enabled .Values.featureStore.services.offlineStore.persistence.store.enabled .Values.featureStore.quickStart.withPersistence }}
+      {{- if or $config.services.offlineStore.persistence.file.enabled $config.services.offlineStore.persistence.store.enabled $config.quickStart.withPersistence }}
       persistence:
-        {{- if or .Values.featureStore.services.offlineStore.persistence.file.enabled .Values.featureStore.quickStart.withPersistence }}
+        {{- if or $config.services.offlineStore.persistence.file.enabled $config.quickStart.withPersistence }}
         file:
-          type: {{ .Values.featureStore.services.offlineStore.persistence.file.type | quote }}
-          {{- if .Values.featureStore.services.offlineStore.persistence.file.pvc.create.enabled }}
+          type: {{ $config.services.offlineStore.persistence.file.type | default "duckdb" | quote }}
+          {{- if $config.services.offlineStore.persistence.file.pvc.create.enabled }}
           pvc:
             create:
-              {{- $storageClass := .Values.featureStore.services.offlineStore.persistence.file.pvc.create.storageClassName | default .Values.storage.defaultStorageClass }}
+              {{- $storageClass := $config.services.offlineStore.persistence.file.pvc.create.storageClassName | default $.Values.storage.defaultStorageClass }}
               {{- if $storageClass }}
               storageClassName: {{ $storageClass | quote }}
               {{- end }}
-              {{- $accessModes := .Values.featureStore.services.offlineStore.persistence.file.pvc.create.accessModes | default .Values.storage.defaultAccessModes }}
+              {{- $accessModes := $config.services.offlineStore.persistence.file.pvc.create.accessModes | default $.Values.storage.defaultAccessModes }}
               {{- if $accessModes }}
               accessModes:
                 {{- toYaml $accessModes | nindent 16 }}
               {{- end }}
               resources:
                 requests:
-                  storage: {{ .Values.featureStore.services.offlineStore.persistence.file.pvc.create.resources.requests.storage | quote }}
-              {{- with .Values.featureStore.services.offlineStore.persistence.file.pvc.create.annotations }}
+                  storage: {{ $config.services.offlineStore.persistence.file.pvc.create.resources.requests.storage | default "10Gi" | quote }}
+              {{- with $config.services.offlineStore.persistence.file.pvc.create.annotations }}
               annotations:
                 {{- toYaml . | nindent 16 }}
               {{- end }}
-            mountPath: {{ .Values.featureStore.services.offlineStore.persistence.file.pvc.mountPath | quote }}
+            mountPath: {{ $config.services.offlineStore.persistence.file.pvc.mountPath | default "/data/offline" | quote }}
           {{- end }}
-        {{- else if .Values.featureStore.services.offlineStore.persistence.store.enabled }}
+        {{- else if $config.services.offlineStore.persistence.store.enabled }}
         store:
-          type: {{ .Values.featureStore.services.offlineStore.persistence.store.type | quote }}
+          type: {{ $config.services.offlineStore.persistence.store.type | quote }}
           secretRef:
-            name: {{ .Values.featureStore.services.offlineStore.persistence.store.secretRef.name | quote }}
-            {{- $secretKey := .Values.featureStore.services.offlineStore.persistence.store.secretRef.key | default .Values.featureStore.services.offlineStore.persistence.store.type }}
+            name: {{ $config.services.offlineStore.persistence.store.secretRef.name | quote }}
+            {{- $secretKey := $config.services.offlineStore.persistence.store.secretRef.key | default $config.services.offlineStore.persistence.store.type }}
             {{- if $secretKey }}
             key: {{ $secretKey | quote }}
             {{- end }}
@@ -172,122 +176,122 @@ spec:
       {{- end }}
     {{- end }}
     
-    {{- if .Values.featureStore.services.registry.local.enabled }}
+    {{- if $config.services.registry.local.enabled }}
     registry:
       local:
-        {{- if or .Values.featureStore.services.registry.local.server.enabled .Values.featureStore.quickStart.disableTLS }}
+        {{- if or $config.services.registry.local.server.enabled $config.quickStart.disableTLS }}
         server:
-          {{- if or .Values.featureStore.quickStart.disableTLS .Values.featureStore.services.registry.local.server.tls.disable }}
+          {{- if or $config.quickStart.disableTLS $config.services.registry.local.server.tls.disable }}
           tls:
             disable: true
           {{- end }}
         {{- end }}
-        {{- if or .Values.featureStore.services.registry.local.persistence.file.enabled .Values.featureStore.services.registry.local.persistence.store.enabled .Values.featureStore.quickStart.withPersistence }}
+        {{- if or $config.services.registry.local.persistence.file.enabled $config.services.registry.local.persistence.store.enabled $config.quickStart.withPersistence }}
         persistence:
-          {{- if or .Values.featureStore.services.registry.local.persistence.file.enabled .Values.featureStore.quickStart.withPersistence }}
+          {{- if or $config.services.registry.local.persistence.file.enabled $config.quickStart.withPersistence }}
           file:
-            {{- if .Values.featureStore.services.registry.local.persistence.file.cloudPath }}
-            path: {{ .Values.featureStore.services.registry.local.persistence.file.cloudPath | quote }}
+            {{- if $config.services.registry.local.persistence.file.cloudPath }}
+            path: {{ $config.services.registry.local.persistence.file.cloudPath | quote }}
             {{- else }}
-            path: {{ .Values.featureStore.services.registry.local.persistence.file.path | quote }}
-            {{- if .Values.featureStore.services.registry.local.persistence.file.pvc.create.enabled }}
+            path: {{ $config.services.registry.local.persistence.file.path | default "registry.db" | quote }}
+            {{- if $config.services.registry.local.persistence.file.pvc.create.enabled }}
             pvc:
               create:
-                {{- $storageClass := .Values.featureStore.services.registry.local.persistence.file.pvc.create.storageClassName | default .Values.storage.defaultStorageClass }}
+                {{- $storageClass := $config.services.registry.local.persistence.file.pvc.create.storageClassName | default $.Values.storage.defaultStorageClass }}
                 {{- if $storageClass }}
                 storageClassName: {{ $storageClass | quote }}
                 {{- end }}
-                {{- $accessModes := .Values.featureStore.services.registry.local.persistence.file.pvc.create.accessModes | default .Values.storage.defaultAccessModes }}
+                {{- $accessModes := $config.services.registry.local.persistence.file.pvc.create.accessModes | default $.Values.storage.defaultAccessModes }}
                 {{- if $accessModes }}
                 accessModes:
                   {{- toYaml $accessModes | nindent 18 }}
                 {{- end }}
                 resources:
                   requests:
-                    storage: {{ .Values.featureStore.services.registry.local.persistence.file.pvc.create.resources.requests.storage | quote }}
-                {{- with .Values.featureStore.services.registry.local.persistence.file.pvc.create.annotations }}
+                    storage: {{ $config.services.registry.local.persistence.file.pvc.create.resources.requests.storage | default "1Gi" | quote }}
+                {{- with $config.services.registry.local.persistence.file.pvc.create.annotations }}
                 annotations:
                   {{- toYaml . | nindent 18 }}
                 {{- end }}
-              mountPath: {{ .Values.featureStore.services.registry.local.persistence.file.pvc.mountPath | quote }}
+              mountPath: {{ $config.services.registry.local.persistence.file.pvc.mountPath | default "/data/registry" | quote }}
             {{- end }}
             {{- end }}
-          {{- else if .Values.featureStore.services.registry.local.persistence.store.enabled }}
+          {{- else if $config.services.registry.local.persistence.store.enabled }}
           store:
-            type: {{ .Values.featureStore.services.registry.local.persistence.store.type | quote }}
+            type: {{ $config.services.registry.local.persistence.store.type | quote }}
             secretRef:
-              name: {{ .Values.featureStore.services.registry.local.persistence.store.secretRef.name | quote }}
-              {{- $secretKey := .Values.featureStore.services.registry.local.persistence.store.secretRef.key | default .Values.featureStore.services.registry.local.persistence.store.type }}
+              name: {{ $config.services.registry.local.persistence.store.secretRef.name | quote }}
+              {{- $secretKey := $config.services.registry.local.persistence.store.secretRef.key | default $config.services.registry.local.persistence.store.type }}
               {{- if $secretKey }}
               key: {{ $secretKey | quote }}
               {{- end }}
           {{- end }}
         {{- end }}
-    {{- else if .Values.featureStore.services.registry.remote.enabled }}
+    {{- else if $config.services.registry.remote.enabled }}
     registry:
       remote:
-        {{- if .Values.featureStore.services.registry.remote.feastRef.name }}
+        {{- if $config.services.registry.remote.feastRef.name }}
         feastRef:
-          name: {{ .Values.featureStore.services.registry.remote.feastRef.name | quote }}
-          {{- with .Values.featureStore.services.registry.remote.feastRef.namespace }}
+          name: {{ $config.services.registry.remote.feastRef.name | quote }}
+          {{- with $config.services.registry.remote.feastRef.namespace }}
           namespace: {{ . | quote }}
           {{- end }}
-        {{- else if .Values.featureStore.services.registry.remote.endpoint }}
-        endpoint: {{ .Values.featureStore.services.registry.remote.endpoint | quote }}
+        {{- else if $config.services.registry.remote.endpoint }}
+        endpoint: {{ $config.services.registry.remote.endpoint | quote }}
         {{- end }}
     {{- end }}
     
-    {{- if .Values.featureStore.services.ui.enabled }}
+    {{- if $config.services.ui.enabled }}
     ui: {}
     {{- end }}
     
-    {{- if .Values.featureStore.services.computeEngine.enabled }}
+    {{- if $config.services.computeEngine.enabled }}
     computeEngine:
-      type: {{ .Values.featureStore.services.computeEngine.type | quote }}
-      {{- with .Values.featureStore.services.computeEngine.config }}
+      type: {{ $config.services.computeEngine.type | default "local" | quote }}
+      {{- with $config.services.computeEngine.config }}
       config:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     {{- end }}
     
-    {{- with .Values.featureStore.volumes }}
+    {{- with $config.volumes }}
     volumes:
       {{- toYaml . | nindent 6 }}
     {{- end }}
   {{- end }}
   
-  {{- if or .Values.featureStore.authz.kubernetes.enabled .Values.featureStore.authz.oidc.enabled }}
+  {{- if or $config.authz.kubernetes.enabled $config.authz.oidc.enabled }}
   authz:
-    {{- if .Values.featureStore.authz.kubernetes.enabled }}
+    {{- if $config.authz.kubernetes.enabled }}
     kubernetes:
       secretRef:
-        name: {{ .Values.featureStore.authz.kubernetes.secretRef.name | quote }}
-    {{- else if .Values.featureStore.authz.oidc.enabled }}
+        name: {{ $config.authz.kubernetes.secretRef.name | quote }}
+    {{- else if $config.authz.oidc.enabled }}
     oidc:
       secretRef:
-        name: {{ .Values.featureStore.authz.oidc.secretRef.name | quote }}
+        name: {{ $config.authz.oidc.secretRef.name | quote }}
     {{- end }}
   {{- end }}
   
-  {{- if .Values.featureStore.cronJob.enabled }}
+  {{- if $config.cronJob.enabled }}
   cronJob:
-    schedule: {{ .Values.featureStore.cronJob.schedule | quote }}
-    {{- with .Values.featureStore.cronJob.timeZone }}
+    schedule: {{ $config.cronJob.schedule | default "0 */6 * * *" | quote }}
+    {{- with $config.cronJob.timeZone }}
     timeZone: {{ . | quote }}
     {{- end }}
-    {{- with .Values.featureStore.cronJob.startingDeadlineSeconds }}
+    {{- with $config.cronJob.startingDeadlineSeconds }}
     startingDeadlineSeconds: {{ . }}
     {{- end }}
-    concurrencyPolicy: {{ .Values.featureStore.cronJob.concurrencyPolicy | quote }}
-    suspend: {{ .Values.featureStore.cronJob.suspend }}
-    successfulJobsHistoryLimit: {{ .Values.featureStore.cronJob.successfulJobsHistoryLimit }}
-    failedJobsHistoryLimit: {{ .Values.featureStore.cronJob.failedJobsHistoryLimit }}
+    concurrencyPolicy: {{ $config.cronJob.concurrencyPolicy | default "Forbid" | quote }}
+    suspend: {{ $config.cronJob.suspend | default false }}
+    successfulJobsHistoryLimit: {{ $config.cronJob.successfulJobsHistoryLimit | default 3 }}
+    failedJobsHistoryLimit: {{ $config.cronJob.failedJobsHistoryLimit | default 1 }}
     jobSpec:
-      parallelism: {{ .Values.featureStore.cronJob.jobSpec.parallelism }}
-      completions: {{ .Values.featureStore.cronJob.jobSpec.completions }}
-      activeDeadlineSeconds: {{ .Values.featureStore.cronJob.jobSpec.activeDeadlineSeconds }}
-      backoffLimit: {{ .Values.featureStore.cronJob.jobSpec.backoffLimit }}
-    {{- with .Values.featureStore.cronJob.containerConfigs }}
+      parallelism: {{ $config.cronJob.jobSpec.parallelism | default 1 }}
+      completions: {{ $config.cronJob.jobSpec.completions | default 1 }}
+      activeDeadlineSeconds: {{ $config.cronJob.jobSpec.activeDeadlineSeconds | default 3600 }}
+      backoffLimit: {{ $config.cronJob.jobSpec.backoffLimit | default 3 }}
+    {{- with $config.cronJob.containerConfigs }}
     containerConfigs:
       {{- with .env }}
       env:
@@ -300,7 +304,29 @@ spec:
     {{- end }}
   {{- end }}
   
-  {{- with .Values.featureStore.config.custom }}
+  {{- with $config.config.custom }}
   {{- toYaml . | nindent 2 }}
   {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- /* Support for legacy single FeatureStore (DEPRECATED) */ -}}
+{{- if .Values.featureStore.enabled }}
+---
+apiVersion: feast.dev/v1alpha1
+kind: FeatureStore
+metadata:
+  name: legacy-featurestore
+  namespace: {{ include "feast-operator.namespace" . }}
+  labels:
+    {{- include "feast-operator.labels" . | nindent 4 }}
+    feast.dev/legacy: "true"
+  {{- with (include "feast-operator.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+    feast.dev/deprecated: "Please migrate to featureStores configuration"
+  {{- end }}
+spec:
+  feastProject: legacy-project
 {{- end }}
