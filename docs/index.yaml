@@ -1,0 +1,84 @@
+apiVersion: v1
+entries:
+  feast-operator:
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
+        - kind: added
+          description: Initial Helm chart for Feast Operator
+          links:
+            - name: GitHub Issue
+              url: https://github.com/feast-dev/feast/issues/
+        - kind: added
+          description: Support for Feast v0.52.0
+        - kind: added
+          description: Configurable RBAC and security contexts
+        - kind: added
+          description: Metrics and monitoring support
+      artifacthub.io/containsSecurityUpdates: "false"
+      artifacthub.io/crds: |
+        - kind: FeatureStore
+          version: v1alpha1
+          name: featurestores.feast.dev
+          displayName: Feast Feature Store
+          description: Defines a Feast feature store deployment
+      artifacthub.io/crdsExamples: |
+        - apiVersion: feast.dev/v1alpha1
+          kind: FeatureStore
+          metadata:
+            name: sample-feast
+          spec:
+            feastProject: my-project
+      artifacthub.io/images: |
+        - name: feast-operator
+          image: feast-operator:0.52.0
+        - name: feast-feature-server
+          image: feast:0.52.0
+        - name: cron-job
+          image: origin-cli:latest
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Website
+          url: https://feast.dev/
+        - name: Documentation
+          url: https://docs.feast.dev/
+        - name: GitHub Repository
+          url: https://github.com/feast-dev/feast
+        - name: Slack Community
+          url: https://slack.feast.dev/
+        - name: Blog
+          url: https://feast.dev/blog/
+      artifacthub.io/operator: "true"
+      artifacthub.io/operatorCapabilities: Deep Insights
+      artifacthub.io/prerelease: "false"
+    apiVersion: v2
+    appVersion: 0.52.0
+    created: "2025-08-19T23:54:09.437056-05:00"
+    description: A Kubernetes operator for managing Feast feature stores
+    digest: 0af63b204bc21557bbf1cba762a89c4bf12a5a8d2ee7920cd4e65baac299e6f2
+    home: https://feast.dev/
+    icon: https://feast.dev/feast-icon-black.png
+    keywords:
+    - machine learning
+    - operator
+    - feast
+    - feature store
+    - mlops
+    - kubernetes
+    - crd
+    - data
+    - analytics
+    - ai
+    maintainers:
+    - email: maintainers@feast.dev
+      name: Feast Community
+      url: https://feast.dev/
+    name: feast-operator
+    sources:
+    - https://github.com/feast-dev/feast
+    - https://github.com/feast-dev/feast/tree/master/infra/feast-operator
+    type: application
+    urls:
+    - https://mkerkstra.github.io/feast/feast-operator-0.52.0.tgz
+    version: 0.52.0
+generated: "2025-08-19T23:54:09.434792-05:00"
