@@ -81,6 +81,50 @@ kubectl get deployment feast-operator-controller-manager
 kubectl get featurestores
 ```
 
+## 🏭 Production Deployment Options
+
+For production deployments, this chart provides several deployment patterns following the [Feast Production Guide](https://docs.feast.dev/how-to-guides/running-feast-in-production):
+
+### Option 1: Operator + Manual FeatureStore CRs (Recommended)
+
+```bash
+# Install the operator
+helm install feast-operator feast-operator/feast-operator
+
+# Create your own FeatureStore CRs
+kubectl apply -f my-featurestore.yaml
+```
+
+### Option 2: All-in-One with Example FeatureStore
+
+```bash
+helm install feast-operator feast-operator/feast-operator \
+  --set featureStore.enabled=true \
+  --set featureStore.feastProject="production" \
+  --set featureStore.services.ui.enabled=true
+```
+
+### Option 3: Production with Persistence
+
+```bash
+helm install feast-operator feast-operator/feast-operator \
+  --set featureStore.enabled=true \
+  --set featureStore.quickStart.withPersistence=true \
+  --set featureStore.services.onlineStore.enabled=true \
+  --set featureStore.services.offlineStore.enabled=true
+```
+
+### Option 4: Development with TLS Disabled
+
+```bash
+helm install feast-operator feast-operator/feast-operator \
+  --set featureStore.enabled=true \
+  --set featureStore.quickStart.disableTLS=true \
+  --set featureStore.services.ui.enabled=true
+```
+
+> **💡 Tip:** For production, manually create FeatureStore CRs with specific database connections, storage backends, and scaling configuration rather than using the built-in examples.
+
 ## Installing the Chart
 
 ### From Helm Repository (Recommended)

@@ -1,0 +1,82 @@
+{{- if .Values.featureStore.enabled }}
+apiVersion: feast.dev/v1alpha1
+kind: FeatureStore
+metadata:
+  name: {{ .Values.featureStore.name }}
+  namespace: {{ include "feast-operator.namespace" . }}
+  labels:
+    {{- include "feast-operator.labels" . | nindent 4 }}
+  {{- with (include "feast-operator.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  feastProject: {{ .Values.featureStore.feastProject }}
+  {{- if or .Values.featureStore.services.onlineStore.enabled .Values.featureStore.services.offlineStore.enabled .Values.featureStore.services.registry.enabled .Values.featureStore.services.ui.enabled }}
+  services:
+    {{- if .Values.featureStore.services.onlineStore.enabled }}
+    onlineStore:
+      {{- if .Values.featureStore.quickStart.disableTLS }}
+      server:
+        tls:
+          disable: true
+      {{- end }}
+      {{- if .Values.featureStore.quickStart.withPersistence }}
+      persistence:
+        file:
+          path: online_store.db
+          pvc:
+            create:
+              resources:
+                requests:
+                  storage: 5Gi
+            mountPath: /data/online
+      {{- end }}
+    {{- end }}
+    {{- if .Values.featureStore.services.offlineStore.enabled }}
+    offlineStore:
+      {{- if .Values.featureStore.quickStart.disableTLS }}
+      server:
+        tls:
+          disable: true
+      {{- end }}
+      {{- if .Values.featureStore.quickStart.withPersistence }}
+      persistence:
+        file:
+          type: duckdb
+          pvc:
+            create:
+              resources:
+                requests:
+                  storage: 10Gi
+            mountPath: /data/offline
+      {{- end }}
+    {{- end }}
+    {{- if .Values.featureStore.services.registry.enabled }}
+    registry:
+      local:
+        {{- if .Values.featureStore.quickStart.disableTLS }}
+        server:
+          tls:
+            disable: true
+        {{- end }}
+        {{- if .Values.featureStore.quickStart.withPersistence }}
+        persistence:
+          file:
+            path: registry.db
+            pvc:
+              create:
+                resources:
+                  requests:
+                    storage: 1Gi
+              mountPath: /data/registry
+        {{- end }}
+    {{- end }}
+    {{- if .Values.featureStore.services.ui.enabled }}
+    ui: {}
+    {{- end }}
+  {{- end }}
+  {{- with .Values.featureStore.config.custom }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}
