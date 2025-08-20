@@ -22,7 +22,7 @@
 
 {{- if .Values.metrics.enabled }}
 6. Metrics are available at:
-   kubectl get service -n {{ include "feast-operator.namespace" . }} {{ include "feast-operator.fullname" . }}-metrics
+   kubectl get service -n {{ include "feast-operator.namespace" . }} {{ include "feast-operator.fullnameWithSuffix" (dict "root" . "suffix" "metrics") }}
 {{- end }}
 
 For more information about configuring Feast, visit https://docs.feast.dev/

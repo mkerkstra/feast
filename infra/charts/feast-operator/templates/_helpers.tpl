@@ -6,6 +6,20 @@ Expand the name of the chart.
 {{- end }}
 
 {{/*
+Generate a DNS-1123 compatible name with a suffix, ensuring total length <= 63
+Usage: {{ include "feast-operator.fullnameWithSuffix" (dict "root" . "suffix" "metrics") }}
+*/}}
+{{- define "feast-operator.fullnameWithSuffix" -}}
+{{- $root := .root -}}
+{{- $suffix := .suffix -}}
+{{- $base := include "feast-operator.fullname" $root -}}
+{{- $max := 63 -}}
+{{- $needed := add (len $suffix) 1 -}}
+{{- $trim := sub $max $needed -}}
+{{- printf "%s-%s" (trunc (int $trim) $base) $suffix | trimSuffix "-" -}}
+{{- end }}
+
+{{/*
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
