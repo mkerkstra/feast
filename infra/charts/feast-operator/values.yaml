@@ -89,6 +89,8 @@ operator:
 
 # Service account configuration
 serviceAccount:
+  # Create a dedicated ServiceAccount for the operator (recommended)
+  create: true
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
