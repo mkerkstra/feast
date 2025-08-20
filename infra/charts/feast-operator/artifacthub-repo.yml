@@ -1,0 +1,9 @@
+# Artifact Hub repository metadata file
+# https://github.com/artifacthub/hub/blob/master/docs/metadata/artifacthub-repo.yml
+repositoryID: 01234567-89ab-cdef-0123-456789abcdef
+owners:
+  - name: feast-community
+    email: maintainers@feast.dev
+ignore:
+  - feast-feature-server
+  - feast
