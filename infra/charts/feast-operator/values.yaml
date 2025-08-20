@@ -144,8 +144,8 @@ storage:
   # Default reclaim policy annotation
   reclaimPolicy: ""
 
-# Name prefix for all resources (matches kustomize namePrefix)
-namePrefix: "feast-operator-"
+# Name prefix for all resources (matches kustomize namePrefix). Keep empty by default to avoid long names.
+namePrefix: ""
 
 # Enable Prometheus monitoring
 prometheus:
