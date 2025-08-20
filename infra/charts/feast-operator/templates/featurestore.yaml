@@ -17,33 +17,34 @@ metadata:
 spec:
   feastProject: {{ $config.feastProject }}
   
-  {{- if or $config.feastProjectDir.git.enabled $config.feastProjectDir.init.enabled }}
+  {{- $fpd := $config.feastProjectDir | default dict }}
+  {{- if or (and $fpd.git $fpd.git.enabled) (and $fpd.init $fpd.init.enabled) }}
   feastProjectDir:
-    {{- if $config.feastProjectDir.git.enabled }}
+    {{- if and $fpd.git $fpd.git.enabled }}
     git:
-      url: {{ $config.feastProjectDir.git.url | quote }}
-      {{- with $config.feastProjectDir.git.ref }}
+      url: {{ $fpd.git.url | quote }}
+      {{- with $fpd.git.ref }}
       ref: {{ . | quote }}
       {{- end }}
-      {{- with $config.feastProjectDir.git.featureRepoPath }}
+      {{- with $fpd.git.featureRepoPath }}
       featureRepoPath: {{ . | quote }}
       {{- end }}
-      {{- with $config.feastProjectDir.git.configs }}
+      {{- with $fpd.git.configs }}
       configs:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with $config.feastProjectDir.git.env }}
+      {{- with $fpd.git.env }}
       env:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with $config.feastProjectDir.git.envFrom }}
+      {{- with $fpd.git.envFrom }}
       envFrom:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-    {{- else if $config.feastProjectDir.init.enabled }}
+    {{- else if and $fpd.init $fpd.init.enabled }}
     init:
-      minimal: {{ $config.feastProjectDir.init.minimal }}
-      {{- with $config.feastProjectDir.init.template }}
+      minimal: {{ $fpd.init.minimal }}
+      {{- with $fpd.init.template }}
       template: {{ . | quote }}
       {{- end }}
     {{- end }}
@@ -51,12 +52,12 @@ spec:
   
   {{- if or $config.services.onlineStore.enabled $config.services.offlineStore.enabled $config.services.registry.local.enabled $config.services.registry.remote.enabled $config.services.ui.enabled $config.services.computeEngine.enabled }}
   services:
-    {{- if $config.services.onlineStore.enabled }}
+    {{- if and $config.services.onlineStore $config.services.onlineStore.enabled }}
     onlineStore:
-      {{- if or $config.services.onlineStore.server.enabled $config.quickStart.disableTLS (and $.Values.tls.enabled $config.tls.enabled) }}
+      {{- if or (and $config.services.onlineStore.server $config.services.onlineStore.server.enabled) $config.quickStart.disableTLS (and $.Values.tls.enabled $config.tls.enabled) }}
       server:
         {{- $tlsEnabled := and $.Values.tls.enabled (or $config.tls.enabled (not $config.quickStart.disableTLS)) }}
-        {{- if or $config.quickStart.disableTLS $config.services.onlineStore.server.tls.disable (not $tlsEnabled) }}
+        {{- if or $config.quickStart.disableTLS (and $config.services.onlineStore.server.tls $config.services.onlineStore.server.tls.disable) (not $tlsEnabled) }}
         tls:
           disable: true
         {{- else if $tlsEnabled }}
@@ -127,12 +128,12 @@ spec:
       {{- end }}
     {{- end }}
     
-    {{- if $config.services.offlineStore.enabled }}
+    {{- if and $config.services.offlineStore $config.services.offlineStore.enabled }}
     offlineStore:
-      {{- if or $config.services.offlineStore.server.enabled $config.quickStart.disableTLS (and $.Values.tls.enabled $config.tls.enabled) }}
+      {{- if or (and $config.services.offlineStore.server $config.services.offlineStore.server.enabled) $config.quickStart.disableTLS (and $.Values.tls.enabled $config.tls.enabled) }}
       server:
         {{- $tlsEnabled := and $.Values.tls.enabled (or $config.tls.enabled (not $config.quickStart.disableTLS)) }}
-        {{- if or $config.quickStart.disableTLS $config.services.offlineStore.server.tls.disable (not $tlsEnabled) }}
+        {{- if or $config.quickStart.disableTLS (and $config.services.offlineStore.server.tls $config.services.offlineStore.server.tls.disable) (not $tlsEnabled) }}
         tls:
           disable: true
         {{- else if $tlsEnabled }}
@@ -198,12 +199,12 @@ spec:
       {{- end }}
     {{- end }}
     
-    {{- if $config.services.registry.local.enabled }}
+    {{- if and $config.services.registry $config.services.registry.local $config.services.registry.local.enabled }}
     registry:
       local:
-        {{- if or $config.services.registry.local.server.enabled $config.quickStart.disableTLS }}
+        {{- if or (and $config.services.registry.local.server $config.services.registry.local.server.enabled) $config.quickStart.disableTLS }}
         server:
-          {{- if or $config.quickStart.disableTLS $config.services.registry.local.server.tls.disable }}
+          {{- if or $config.quickStart.disableTLS (and $config.services.registry.local.server.tls $config.services.registry.local.server.tls.disable) }}
           tls:
             disable: true
           {{- end }}
@@ -249,7 +250,7 @@ spec:
               {{- end }}
           {{- end }}
         {{- end }}
-    {{- else if $config.services.registry.remote.enabled }}
+    {{- else if and $config.services.registry.remote $config.services.registry.remote.enabled }}
     registry:
       remote:
         {{- if $config.services.registry.remote.feastRef.name }}
@@ -263,11 +264,11 @@ spec:
         {{- end }}
     {{- end }}
     
-    {{- if $config.services.ui.enabled }}
+    {{- if and $config.services.ui $config.services.ui.enabled }}
     ui: {}
     {{- end }}
     
-    {{- if $config.services.computeEngine.enabled }}
+    {{- if and $config.services.computeEngine $config.services.computeEngine.enabled }}
     computeEngine:
       type: {{ $config.services.computeEngine.type | default "local" | quote }}
       {{- with $config.services.computeEngine.config }}
@@ -281,22 +282,22 @@ spec:
     {{- if $hasVolumes }}
     volumes:
       {{- if $tlsEnabled }}
-      {{- if $config.services.onlineStore.enabled }}
+      {{- if and $config.services.onlineStore $config.services.onlineStore.enabled }}
       - name: onlinestore-tls
         secret:
           secretName: {{ $config.tls.services.onlineStore.secretName | default ($config.tls.existingSecret | default (printf "%s-onlinestore-tls" $name)) }}
       {{- end }}
-      {{- if $config.services.offlineStore.enabled }}
+      {{- if and $config.services.offlineStore $config.services.offlineStore.enabled }}
       - name: offlinestore-tls
         secret:
           secretName: {{ $config.tls.services.offlineStore.secretName | default ($config.tls.existingSecret | default (printf "%s-offlinestore-tls" $name)) }}
       {{- end }}
-      {{- if or $config.services.registry.local.enabled $config.services.registry.remote.enabled }}
+      {{- if or (and $config.services.registry $config.services.registry.local $config.services.registry.local.enabled) (and $config.services.registry $config.services.registry.remote $config.services.registry.remote.enabled) }}
       - name: registry-tls
         secret:
           secretName: {{ $config.tls.services.registry.secretName | default ($config.tls.existingSecret | default (printf "%s-registry-tls" $name)) }}
       {{- end }}
-      {{- if $config.services.ui.enabled }}
+      {{- if and $config.services.ui $config.services.ui.enabled }}
       - name: ui-tls
         secret:
           secretName: {{ $config.tls.services.ui.secretName | default ($config.tls.existingSecret | default (printf "%s-ui-tls" $name)) }}
