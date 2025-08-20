@@ -1,4 +1,4 @@
-{{- if .Values.prometheus.serviceMonitor.enabled }}
+{{- if and .Values.prometheus.serviceMonitor.enabled (has "monitoring.coreos.com/v1" .Capabilities.APIVersions) }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -26,4 +26,8 @@ spec:
   selector:
     matchLabels:
       {{- include "feast-operator.selectorLabels" . | nindent 6 }}
+{{- end }}
+{{- if and .Values.prometheus.serviceMonitor.enabled (not (has "monitoring.coreos.com/v1" .Capabilities.APIVersions)) }}
+{{- /* Avoid hard failure; emit a comment so users see why it didn't render */ -}}
+# ServiceMonitor CRD not found (monitoring.coreos.com/v1). Skipping ServiceMonitor creation.
 {{- end }}

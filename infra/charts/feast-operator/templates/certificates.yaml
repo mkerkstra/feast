@@ -1,4 +1,4 @@
-{{- if and .Values.tls.enabled .Values.tls.certManager.enabled }}
+{{- if and .Values.tls.enabled .Values.tls.certManager.enabled (has "cert-manager.io/v1" .Capabilities.APIVersions) }}
 {{- range $name, $config := .Values.featureStores }}
 {{- if and (ne $name "enabled") $config.enabled (or $config.tls.enabled $.Values.tls.enabled) }}
 {{- if not $config.tls.existingSecret }}
@@ -60,6 +60,9 @@ spec:
   issuerRef:
     name: {{ $issuerName }}
     kind: {{ $issuerKind }}
+{{- end }}
+{{- if and .Values.tls.enabled .Values.tls.certManager.enabled (not (has "cert-manager.io/v1" .Capabilities.APIVersions)) }}
+# cert-manager CRDs not found (cert-manager.io/v1). Skipping Certificate creation.
 {{- end }}
 
 {{- /* Certificate for Offline Store */ -}}

@@ -1,4 +1,7 @@
 {{- if and .Values.tls.certManager.enabled .Values.tls.issuer.create }}
+{{- if and (eq .Values.tls.issuer.type "letsencrypt") (not .Values.tls.issuer.letsencrypt.email) }}
+{{- fail "tls.issuer.letsencrypt.email must be set when issuer.type=letsencrypt" }}
+{{- end }}
 {{- if .Values.tls.issuer.clusterWide }}
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
