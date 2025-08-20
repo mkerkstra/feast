@@ -16,7 +16,7 @@ keywords:
   - analytics
   - ai
 home: https://feast.dev/
-icon: https://feast.dev/feast-icon-black.png
+icon: https://raw.githubusercontent.com/feast-dev/feast/master/docs/assets/feast_logo.png
 sources:
   - https://github.com/feast-dev/feast
   - https://github.com/feast-dev/feast/tree/master/infra/feast-operator
@@ -70,8 +70,8 @@ annotations:
         feastProject: my-project
   artifacthub.io/images: |
     - name: feast-operator
-      image: feast-operator:0.52.0
+      image: quay.io/feastdev/feast-operator:0.52.0
     - name: feast-feature-server
-      image: feast:0.52.0
+      image: quay.io/feastdev/feature-server:0.52.0
     - name: cron-job
-      image: origin-cli:latest
+      image: quay.io/openshift/origin-cli:4.17
