@@ -172,6 +172,62 @@
           "description": "Install CRDs"
         }
       }
+    },
+    "tls": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable TLS support and secret mounts in FeatureStore specs"
+        },
+        "certManager": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Manage cert-manager resources (Issuer/Certificate)"
+            }
+          }
+        },
+        "issuer": {
+          "type": "object",
+          "properties": {
+            "create": {
+              "type": "boolean"
+            },
+            "clusterWide": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "selfSigned",
+                "letsencrypt",
+                "ca",
+                "vault"
+              ]
+            },
+            "letsencrypt": {
+              "type": "object"
+            },
+            "ca": {
+              "type": "object"
+            },
+            "selfSigned": {
+              "type": "object"
+            },
+            "vault": {
+              "type": "object"
+            }
+          }
+        },
+        "defaultCertificate": {
+          "type": "object"
+        }
+      }
     }
   }
 }

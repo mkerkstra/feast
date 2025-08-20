@@ -214,7 +214,10 @@ This chart can optionally deploy example FeatureStore custom resources. The conf
 - **Access Modes**: Configurable PVC access modes with sensible defaults
 - **Annotations**: Support for storage-specific annotations (backup policies, etc)
 
-#### 🔐 Secret Management
+#### 🔐 Security & TLS
+- **cert-manager Integration**: Automatic TLS certificate generation and renewal
+- **Multiple Issuers**: Support for Let's Encrypt, CA, self-signed, and Vault issuers
+- **Per-Service Certificates**: Individual certificates for each Feast service
 - **Smart Defaults**: SecretRef keys automatically default to store type if not specified
 - **Flexible Secrets**: Support for multi-key secrets (e.g., separate `postgres`, `sql` keys)
 - **Environment Variables**: Integration with existing secret management systems
@@ -399,6 +402,127 @@ featureStores:
               secretRef:
                 name: "feast-stores"
                 # key defaults to "sql"
+```
+
+#### TLS-Enabled Production Deployment with cert-manager
+```yaml
+# Enable TLS certificate management
+tls:
+  enabled: true
+  certManager:
+    enabled: true
+  issuer:
+    create: true
+    clusterWide: true
+    name: "letsencrypt-prod"
+    type: "letsencrypt"
+    letsencrypt:
+      server: "https://acme-v02.api.letsencrypt.org/directory"
+      email: "admin@company.com"
+      solvers:
+        - http01:
+            ingress:
+              class: "nginx"
+
+featureStores:
+  enabled: true
+  
+  production:
+    enabled: true
+    feastProject: "production"
+    
+    # Enable TLS for this FeatureStore
+    tls:
+      enabled: true
+      certificate:
+        dnsNames:
+          - "feast-prod.company.com"
+          - "feast-registry.company.com"
+    
+    services:
+      onlineStore:
+        enabled: true
+        # TLS certificates automatically mounted at /etc/certs/
+      registry:
+        local:
+          enabled: true
+          server:
+            enabled: true  # Expose registry with TLS
+      ui:
+        enabled: true
+        # UI will be secured with TLS certificate
+```
+
+#### Development with Self-Signed Certificates
+```yaml
+tls:
+  enabled: true
+  certManager:
+    enabled: true
+  issuer:
+    create: true
+    clusterWide: false
+    name: "selfsigned-issuer"
+    type: "selfSigned"
+
+featureStores:
+  enabled: true
+  
+  development:
+    enabled: true
+    feastProject: "dev"
+    tls:
+      enabled: true
+    services:
+      onlineStore:
+        enabled: true
+      ui:
+        enabled: true
+```
+
+#### Use Existing Secrets (No cert-manager)
+```yaml
+tls:
+  enabled: true
+  certManager:
+    enabled: false  # do not create Issuer/Certificate
+
+featureStores:
+  enabled: true
+  production:
+    enabled: true
+    feastProject: "prod"
+    tls:
+      enabled: true
+      # one secret for all services, can be overridden per-service
+      existingSecret: "feast-prod-shared-tls"
+      services:
+        onlineStore:
+          secretName: "feast-prod-online-tls"  # overrides existingSecret for online
+        registry:
+          secretName: "feast-prod-registry-tls"
+```
+
+#### Use Existing Issuer (ClusterIssuer or Issuer)
+```yaml
+tls:
+  enabled: true
+  certManager:
+    enabled: true  # create Certificate objects only
+  issuer:
+    create: false  # reuse an existing issuer
+
+featureStores:
+  enabled: true
+  sample:
+    enabled: true
+    feastProject: "sample"
+    tls:
+      enabled: true
+      certificate:
+        issuerRef:
+          name: "my-shared-cluster-issuer"
+          kind: "ClusterIssuer"
 ```
 
 For complete configuration options, see the [values.yaml](./values.yaml) file.

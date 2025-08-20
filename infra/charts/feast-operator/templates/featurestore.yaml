@@ -53,11 +53,17 @@ spec:
   services:
     {{- if $config.services.onlineStore.enabled }}
     onlineStore:
-      {{- if or $config.services.onlineStore.server.enabled $config.quickStart.disableTLS }}
+      {{- if or $config.services.onlineStore.server.enabled $config.quickStart.disableTLS (and $.Values.tls.enabled $config.tls.enabled) }}
       server:
-        {{- if or $config.quickStart.disableTLS $config.services.onlineStore.server.tls.disable }}
+        {{- $tlsEnabled := and $.Values.tls.enabled (or $config.tls.enabled (not $config.quickStart.disableTLS)) }}
+        {{- if or $config.quickStart.disableTLS $config.services.onlineStore.server.tls.disable (not $tlsEnabled) }}
         tls:
           disable: true
+        {{- else if $tlsEnabled }}
+        tls:
+          # TLS configuration for online store
+          certPath: "/etc/certs/tls.crt"
+          keyPath: "/etc/certs/tls.key"
         {{- end }}
         {{- with $config.services.onlineStore.server.env }}
         env:
@@ -67,10 +73,15 @@ spec:
         envFrom:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with $config.services.onlineStore.server.volumeMounts }}
         volumeMounts:
+          {{- if $tlsEnabled }}
+          - name: onlinestore-tls
+            mountPath: "/etc/certs"
+            readOnly: true
+          {{- end }}
+          {{- with $config.services.onlineStore.server.volumeMounts }}
           {{- toYaml . | nindent 10 }}
-        {{- end }}
+          {{- end }}
       {{- end }}
       {{- if or $config.services.onlineStore.persistence.file.enabled $config.services.onlineStore.persistence.store.enabled $config.quickStart.withPersistence }}
       persistence:
@@ -118,11 +129,17 @@ spec:
     
     {{- if $config.services.offlineStore.enabled }}
     offlineStore:
-      {{- if or $config.services.offlineStore.server.enabled $config.quickStart.disableTLS }}
+      {{- if or $config.services.offlineStore.server.enabled $config.quickStart.disableTLS (and $.Values.tls.enabled $config.tls.enabled) }}
       server:
-        {{- if or $config.quickStart.disableTLS $config.services.offlineStore.server.tls.disable }}
+        {{- $tlsEnabled := and $.Values.tls.enabled (or $config.tls.enabled (not $config.quickStart.disableTLS)) }}
+        {{- if or $config.quickStart.disableTLS $config.services.offlineStore.server.tls.disable (not $tlsEnabled) }}
         tls:
           disable: true
+        {{- else if $tlsEnabled }}
+        tls:
+          # TLS configuration for offline store
+          certPath: "/etc/certs/tls.crt"
+          keyPath: "/etc/certs/tls.key"
         {{- end }}
         {{- with $config.services.offlineStore.server.env }}
         env:
@@ -132,10 +149,15 @@ spec:
         envFrom:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with $config.services.offlineStore.server.volumeMounts }}
         volumeMounts:
+          {{- if $tlsEnabled }}
+          - name: offlinestore-tls
+            mountPath: "/etc/certs"
+            readOnly: true
+          {{- end }}
+          {{- with $config.services.offlineStore.server.volumeMounts }}
           {{- toYaml . | nindent 10 }}
-        {{- end }}
+          {{- end }}
       {{- end }}
       {{- if or $config.services.offlineStore.persistence.file.enabled $config.services.offlineStore.persistence.store.enabled $config.quickStart.withPersistence }}
       persistence:
@@ -254,9 +276,35 @@ spec:
       {{- end }}
     {{- end }}
     
-    {{- with $config.volumes }}
+    {{- $tlsEnabled := and $.Values.tls.enabled (or $config.tls.enabled (not $config.quickStart.disableTLS)) }}
+    {{- $hasVolumes := or $config.volumes $tlsEnabled }}
+    {{- if $hasVolumes }}
     volumes:
+      {{- if $tlsEnabled }}
+      {{- if $config.services.onlineStore.enabled }}
+      - name: onlinestore-tls
+        secret:
+          secretName: {{ $config.tls.services.onlineStore.secretName | default ($config.tls.existingSecret | default (printf "%s-onlinestore-tls" $name)) }}
+      {{- end }}
+      {{- if $config.services.offlineStore.enabled }}
+      - name: offlinestore-tls
+        secret:
+          secretName: {{ $config.tls.services.offlineStore.secretName | default ($config.tls.existingSecret | default (printf "%s-offlinestore-tls" $name)) }}
+      {{- end }}
+      {{- if or $config.services.registry.local.enabled $config.services.registry.remote.enabled }}
+      - name: registry-tls
+        secret:
+          secretName: {{ $config.tls.services.registry.secretName | default ($config.tls.existingSecret | default (printf "%s-registry-tls" $name)) }}
+      {{- end }}
+      {{- if $config.services.ui.enabled }}
+      - name: ui-tls
+        secret:
+          secretName: {{ $config.tls.services.ui.secretName | default ($config.tls.existingSecret | default (printf "%s-ui-tls" $name)) }}
+      {{- end }}
+      {{- end }}
+      {{- with $config.volumes }}
       {{- toYaml . | nindent 6 }}
+      {{- end }}
     {{- end }}
   {{- end }}
   
@@ -309,24 +357,4 @@ spec:
   {{- end }}
 {{- end }}
 {{- end }}
-{{- end }}
-
-{{- /* Support for legacy single FeatureStore (DEPRECATED) */ -}}
-{{- if .Values.featureStore.enabled }}
----
-apiVersion: feast.dev/v1alpha1
-kind: FeatureStore
-metadata:
-  name: legacy-featurestore
-  namespace: {{ include "feast-operator.namespace" . }}
-  labels:
-    {{- include "feast-operator.labels" . | nindent 4 }}
-    feast.dev/legacy: "true"
-  {{- with (include "feast-operator.annotations" .) }}
-  annotations:
-    {{- . | nindent 4 }}
-    feast.dev/deprecated: "Please migrate to featureStores configuration"
-  {{- end }}
-spec:
-  feastProject: legacy-project
 {{- end }}

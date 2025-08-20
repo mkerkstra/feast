@@ -1,0 +1,233 @@
+{{- if and .Values.tls.enabled .Values.tls.certManager.enabled }}
+{{- range $name, $config := .Values.featureStores }}
+{{- if and (ne $name "enabled") $config.enabled (or $config.tls.enabled $.Values.tls.enabled) }}
+{{- if not $config.tls.existingSecret }}
+{{- $tlsEnabled := or $config.tls.enabled $.Values.tls.enabled }}
+{{- $defaultIssuerName := (ternary $.Values.tls.issuer.name (printf "%s-%s" (include "feast-operator.fullname" $) $.Values.tls.issuer.name) $.Values.tls.issuer.clusterWide) }}
+{{- $issuerName := $config.tls.certificate.issuerRef.name | default $defaultIssuerName }}
+{{- $issuerKind := $config.tls.certificate.issuerRef.kind | default (ternary "ClusterIssuer" "Issuer" $.Values.tls.issuer.clusterWide) }}
+
+{{- /* Certificate for Online Store */ -}}
+{{- if $config.services.onlineStore.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $name }}-onlinestore-tls
+  namespace: {{ include "feast-operator.namespace" $ }}
+  labels:
+    {{- include "feast-operator.labels" $ | nindent 4 }}
+    feast.dev/featurestore: {{ $name | quote }}
+    feast.dev/service: "onlinestore"
+spec:
+  secretName: {{ $config.tls.services.onlineStore.secretName | default (printf "%s-onlinestore-tls" $name) }}
+  duration: {{ $config.tls.certificate.duration | default $.Values.tls.defaultCertificate.duration }}
+  renewBefore: {{ $config.tls.certificate.renewBefore | default $.Values.tls.defaultCertificate.renewBefore }}
+  {{- with $.Values.tls.defaultCertificate.subject }}
+  subject:
+    {{- with .organizations }}
+    organizations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .organizationalUnits }}
+    organizationalUnits:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  privateKey:
+    algorithm: {{ $.Values.tls.defaultCertificate.algorithm }}
+    size: {{ $.Values.tls.defaultCertificate.keySize }}
+  usages:
+    {{- toYaml $.Values.tls.defaultCertificate.usages | nindent 4 }}
+  dnsNames:
+    - {{ $name }}-onlinestore
+    - {{ $name }}-onlinestore.{{ include "feast-operator.namespace" $ }}
+    - {{ $name }}-onlinestore.{{ include "feast-operator.namespace" $ }}.svc
+    - {{ $name }}-onlinestore.{{ include "feast-operator.namespace" $ }}.svc.cluster.local
+    {{- with $config.tls.services.onlineStore.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $config.tls.certificate.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $.Values.tls.defaultCertificate.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $.Values.tls.defaultCertificate.ipAddresses }}
+  ipAddresses:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  issuerRef:
+    name: {{ $issuerName }}
+    kind: {{ $issuerKind }}
+{{- end }}
+
+{{- /* Certificate for Offline Store */ -}}
+{{- if $config.services.offlineStore.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $name }}-offlinestore-tls
+  namespace: {{ include "feast-operator.namespace" $ }}
+  labels:
+    {{- include "feast-operator.labels" $ | nindent 4 }}
+    feast.dev/featurestore: {{ $name | quote }}
+    feast.dev/service: "offlinestore"
+spec:
+  secretName: {{ $config.tls.services.offlineStore.secretName | default (printf "%s-offlinestore-tls" $name) }}
+  duration: {{ $config.tls.certificate.duration | default $.Values.tls.defaultCertificate.duration }}
+  renewBefore: {{ $config.tls.certificate.renewBefore | default $.Values.tls.defaultCertificate.renewBefore }}
+  {{- with $.Values.tls.defaultCertificate.subject }}
+  subject:
+    {{- with .organizations }}
+    organizations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .organizationalUnits }}
+    organizationalUnits:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  privateKey:
+    algorithm: {{ $.Values.tls.defaultCertificate.algorithm }}
+    size: {{ $.Values.tls.defaultCertificate.keySize }}
+  usages:
+    {{- toYaml $.Values.tls.defaultCertificate.usages | nindent 4 }}
+  dnsNames:
+    - {{ $name }}-offlinestore
+    - {{ $name }}-offlinestore.{{ include "feast-operator.namespace" $ }}
+    - {{ $name }}-offlinestore.{{ include "feast-operator.namespace" $ }}.svc
+    - {{ $name }}-offlinestore.{{ include "feast-operator.namespace" $ }}.svc.cluster.local
+    {{- with $config.tls.services.offlineStore.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $config.tls.certificate.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $.Values.tls.defaultCertificate.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $.Values.tls.defaultCertificate.ipAddresses }}
+  ipAddresses:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  issuerRef:
+    name: {{ $issuerName }}
+    kind: {{ $issuerKind }}
+{{- end }}
+
+{{- /* Certificate for Registry */ -}}
+{{- if or $config.services.registry.local.enabled $config.services.registry.remote.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $name }}-registry-tls
+  namespace: {{ include "feast-operator.namespace" $ }}
+  labels:
+    {{- include "feast-operator.labels" $ | nindent 4 }}
+    feast.dev/featurestore: {{ $name | quote }}
+    feast.dev/service: "registry"
+spec:
+  secretName: {{ $config.tls.services.registry.secretName | default (printf "%s-registry-tls" $name) }}
+  duration: {{ $config.tls.certificate.duration | default $.Values.tls.defaultCertificate.duration }}
+  renewBefore: {{ $config.tls.certificate.renewBefore | default $.Values.tls.defaultCertificate.renewBefore }}
+  {{- with $.Values.tls.defaultCertificate.subject }}
+  subject:
+    {{- with .organizations }}
+    organizations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .organizationalUnits }}
+    organizationalUnits:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  privateKey:
+    algorithm: {{ $.Values.tls.defaultCertificate.algorithm }}
+    size: {{ $.Values.tls.defaultCertificate.keySize }}
+  usages:
+    {{- toYaml $.Values.tls.defaultCertificate.usages | nindent 4 }}
+  dnsNames:
+    - {{ $name }}-registry
+    - {{ $name }}-registry.{{ include "feast-operator.namespace" $ }}
+    - {{ $name }}-registry.{{ include "feast-operator.namespace" $ }}.svc
+    - {{ $name }}-registry.{{ include "feast-operator.namespace" $ }}.svc.cluster.local
+    {{- with $config.tls.services.registry.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $config.tls.certificate.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $.Values.tls.defaultCertificate.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $.Values.tls.defaultCertificate.ipAddresses }}
+  ipAddresses:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  issuerRef:
+    name: {{ $issuerName }}
+    kind: {{ $issuerKind }}
+{{- end }}
+
+{{- /* Certificate for UI */ -}}
+{{- if $config.services.ui.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $name }}-ui-tls
+  namespace: {{ include "feast-operator.namespace" $ }}
+  labels:
+    {{- include "feast-operator.labels" $ | nindent 4 }}
+    feast.dev/featurestore: {{ $name | quote }}
+    feast.dev/service: "ui"
+spec:
+  secretName: {{ $config.tls.services.ui.secretName | default (printf "%s-ui-tls" $name) }}
+  duration: {{ $config.tls.certificate.duration | default $.Values.tls.defaultCertificate.duration }}
+  renewBefore: {{ $config.tls.certificate.renewBefore | default $.Values.tls.defaultCertificate.renewBefore }}
+  {{- with $.Values.tls.defaultCertificate.subject }}
+  subject:
+    {{- with .organizations }}
+    organizations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .organizationalUnits }}
+    organizationalUnits:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  privateKey:
+    algorithm: {{ $.Values.tls.defaultCertificate.algorithm }}
+    size: {{ $.Values.tls.defaultCertificate.keySize }}
+  usages:
+    {{- toYaml $.Values.tls.defaultCertificate.usages | nindent 4 }}
+  dnsNames:
+    - {{ $name }}-ui
+    - {{ $name }}-ui.{{ include "feast-operator.namespace" $ }}
+    - {{ $name }}-ui.{{ include "feast-operator.namespace" $ }}.svc
+    - {{ $name }}-ui.{{ include "feast-operator.namespace" $ }}.svc.cluster.local
+    {{- with $config.tls.services.ui.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $config.tls.certificate.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $.Values.tls.defaultCertificate.dnsNames }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $.Values.tls.defaultCertificate.ipAddresses }}
+  ipAddresses:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  issuerRef:
+    name: {{ $issuerName }}
+    kind: {{ $issuerKind }}
+{{- end }}
+
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

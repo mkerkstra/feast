@@ -1,0 +1,43 @@
+{{- if and .Values.tls.certManager.enabled .Values.tls.issuer.create }}
+{{- if .Values.tls.issuer.clusterWide }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.tls.issuer.name }}
+  labels:
+    {{- include "feast-operator.labels" . | nindent 4 }}
+{{- else }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "feast-operator.fullname" . }}-{{ .Values.tls.issuer.name }}
+  namespace: {{ include "feast-operator.namespace" . }}
+  labels:
+    {{- include "feast-operator.labels" . | nindent 4 }}
+{{- end }}
+spec:
+  {{- if eq .Values.tls.issuer.type "letsencrypt" }}
+  acme:
+    server: {{ .Values.tls.issuer.letsencrypt.server }}
+    email: {{ .Values.tls.issuer.letsencrypt.email }}
+    privateKeySecretRef:
+      name: {{ .Values.tls.issuer.letsencrypt.privateKeySecretRef.name }}
+    solvers:
+      {{- toYaml .Values.tls.issuer.letsencrypt.solvers | nindent 6 }}
+  {{- else if eq .Values.tls.issuer.type "ca" }}
+  ca:
+    secretName: {{ .Values.tls.issuer.ca.secretName }}
+  {{- else if eq .Values.tls.issuer.type "selfSigned" }}
+  selfSigned: {}
+  {{- else if eq .Values.tls.issuer.type "vault" }}
+  vault:
+    server: {{ .Values.tls.issuer.vault.server }}
+    path: {{ .Values.tls.issuer.vault.path }}
+    auth:
+      kubernetes:
+        role: {{ .Values.tls.issuer.vault.auth.kubernetes.role }}
+        secretRef:
+          name: {{ .Values.tls.issuer.vault.auth.kubernetes.secretRef.name }}
+          key: {{ .Values.tls.issuer.vault.auth.kubernetes.secretRef.key }}
+  {{- end }}
+{{- end }}

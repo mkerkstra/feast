@@ -157,6 +157,80 @@ prometheus:
     # Scrape timeout
     timeout: 10s
 
+# TLS Certificate Management via cert-manager
+tls:
+  # Enable TLS support in generated FeatureStore specs (mount secrets, set cert paths)
+  enabled: false
+  
+  # Control whether this chart manages cert-manager resources (Issuer/Certificate)
+  certManager:
+    enabled: false
+  
+  # Certificate issuer configuration
+  issuer:
+    # Create a ClusterIssuer or Issuer
+    create: true
+    # Use ClusterIssuer (cluster-wide) or Issuer (namespace-scoped)
+    clusterWide: true
+    # Issuer name (will be prefixed with release name if not clusterWide)
+    name: "feast-issuer"
+    
+    # Issuer type configuration
+    type: "selfSigned"  # selfSigned (default), letsencrypt, ca, vault
+    
+    # Let's Encrypt ACME configuration
+    letsencrypt:
+      # ACME server (letsencrypt-staging or letsencrypt-prod)
+      server: "https://acme-staging-v02.api.letsencrypt.org/directory"
+      # Email for ACME registration
+      email: ""
+      # Private key secret name
+      privateKeySecretRef:
+        name: "letsencrypt-private-key"
+      # Solvers for ACME challenges
+      solvers:
+        - http01:
+            ingress:
+              class: "nginx"
+    
+    # CA Issuer configuration
+    ca:
+      # Secret containing the CA certificate and private key
+      secretName: "ca-secret"
+    
+    # Self-signed issuer configuration  
+    selfSigned: {}
+    
+    # Vault issuer configuration
+    vault:
+      server: ""
+      path: ""
+      auth:
+        kubernetes:
+          role: ""
+          secretRef:
+            name: ""
+            key: ""
+  
+  # Default certificate configuration for FeatureStores
+  defaultCertificate:
+    # Default certificate duration
+    duration: "2160h"  # 90 days
+    # Certificate renewal time
+    renewBefore: "360h"  # 15 days
+    # Certificate algorithm
+    algorithm: "RSA"
+    # Certificate key size
+    keySize: 2048
+    # Certificate usages
+    usages:
+      - "digital signature"
+      - "key encipherment"
+      - "server auth"
+    # Default DNS names and IPs for certificates
+    dnsNames: []
+    ipAddresses: []
+
 # Advanced configuration options
 advanced:
   # Enable leader election (should always be true for production)
@@ -178,6 +252,37 @@ featureStores:
   sample:
     enabled: true  # Enable this specific FeatureStore
     feastProject: "my_project"
+    
+    # TLS configuration for this FeatureStore
+    tls:
+      # Enable TLS for this FeatureStore (overrides global tls.enabled)
+      enabled: false
+      # Use existing certificate secret or create new certificates
+      existingSecret: ""
+      # Certificate configuration (uses global defaults if not specified)
+      certificate:
+        # Override default certificate settings
+        dnsNames: []
+        duration: ""
+        renewBefore: ""
+        # Issuer to use (defaults to global issuer)
+        issuerRef:
+          name: ""
+          kind: "ClusterIssuer"  # ClusterIssuer or Issuer
+      # Service-specific certificate overrides
+      services:
+        onlineStore:
+          secretName: ""  # Custom certificate secret name
+          dnsNames: []
+        offlineStore:
+          secretName: ""
+          dnsNames: []
+        registry:
+          secretName: ""
+          dnsNames: []
+        ui:
+          secretName: ""
+          dnsNames: []
     
     # Quick start configurations
     quickStart:
@@ -259,8 +364,3 @@ featureStores:
           enabled: true
       ui:
         enabled: true
-
-# Legacy single FeatureStore configuration (DEPRECATED - use featureStores instead)
-# This is maintained for backward compatibility and will be removed in a future version
-featureStore:
-  enabled: false
