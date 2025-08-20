@@ -80,12 +80,22 @@ spec:
               name: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.ref.name | quote }}
             {{- else }}
             create:
-              {{- with .Values.featureStore.services.onlineStore.persistence.file.pvc.create.storageClassName }}
-              storageClassName: {{ . | quote }}
+              {{- $storageClass := .Values.featureStore.services.onlineStore.persistence.file.pvc.create.storageClassName | default .Values.storage.defaultStorageClass }}
+              {{- if $storageClass }}
+              storageClassName: {{ $storageClass | quote }}
+              {{- end }}
+              {{- $accessModes := .Values.featureStore.services.onlineStore.persistence.file.pvc.create.accessModes | default .Values.storage.defaultAccessModes }}
+              {{- if $accessModes }}
+              accessModes:
+                {{- toYaml $accessModes | nindent 16 }}
               {{- end }}
               resources:
                 requests:
                   storage: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.create.resources.requests.storage | quote }}
+              {{- with .Values.featureStore.services.onlineStore.persistence.file.pvc.create.annotations }}
+              annotations:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
             {{- end }}
             mountPath: {{ .Values.featureStore.services.onlineStore.persistence.file.pvc.mountPath | quote }}
           {{- end }}
@@ -94,8 +104,9 @@ spec:
           type: {{ .Values.featureStore.services.onlineStore.persistence.store.type | quote }}
           secretRef:
             name: {{ .Values.featureStore.services.onlineStore.persistence.store.secretRef.name | quote }}
-            {{- with .Values.featureStore.services.onlineStore.persistence.store.secretRef.key }}
-            key: {{ . | quote }}
+            {{- $secretKey := .Values.featureStore.services.onlineStore.persistence.store.secretRef.key | default .Values.featureStore.services.onlineStore.persistence.store.type }}
+            {{- if $secretKey }}
+            key: {{ $secretKey | quote }}
             {{- end }}
         {{- end }}
       {{- end }}
@@ -130,12 +141,22 @@ spec:
           {{- if .Values.featureStore.services.offlineStore.persistence.file.pvc.create.enabled }}
           pvc:
             create:
-              {{- with .Values.featureStore.services.offlineStore.persistence.file.pvc.create.storageClassName }}
-              storageClassName: {{ . | quote }}
+              {{- $storageClass := .Values.featureStore.services.offlineStore.persistence.file.pvc.create.storageClassName | default .Values.storage.defaultStorageClass }}
+              {{- if $storageClass }}
+              storageClassName: {{ $storageClass | quote }}
+              {{- end }}
+              {{- $accessModes := .Values.featureStore.services.offlineStore.persistence.file.pvc.create.accessModes | default .Values.storage.defaultAccessModes }}
+              {{- if $accessModes }}
+              accessModes:
+                {{- toYaml $accessModes | nindent 16 }}
               {{- end }}
               resources:
                 requests:
                   storage: {{ .Values.featureStore.services.offlineStore.persistence.file.pvc.create.resources.requests.storage | quote }}
+              {{- with .Values.featureStore.services.offlineStore.persistence.file.pvc.create.annotations }}
+              annotations:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
             mountPath: {{ .Values.featureStore.services.offlineStore.persistence.file.pvc.mountPath | quote }}
           {{- end }}
         {{- else if .Values.featureStore.services.offlineStore.persistence.store.enabled }}
@@ -143,8 +164,9 @@ spec:
           type: {{ .Values.featureStore.services.offlineStore.persistence.store.type | quote }}
           secretRef:
             name: {{ .Values.featureStore.services.offlineStore.persistence.store.secretRef.name | quote }}
-            {{- with .Values.featureStore.services.offlineStore.persistence.store.secretRef.key }}
-            key: {{ . | quote }}
+            {{- $secretKey := .Values.featureStore.services.offlineStore.persistence.store.secretRef.key | default .Values.featureStore.services.offlineStore.persistence.store.type }}
+            {{- if $secretKey }}
+            key: {{ $secretKey | quote }}
             {{- end }}
         {{- end }}
       {{- end }}
@@ -171,9 +193,22 @@ spec:
             {{- if .Values.featureStore.services.registry.local.persistence.file.pvc.create.enabled }}
             pvc:
               create:
+                {{- $storageClass := .Values.featureStore.services.registry.local.persistence.file.pvc.create.storageClassName | default .Values.storage.defaultStorageClass }}
+                {{- if $storageClass }}
+                storageClassName: {{ $storageClass | quote }}
+                {{- end }}
+                {{- $accessModes := .Values.featureStore.services.registry.local.persistence.file.pvc.create.accessModes | default .Values.storage.defaultAccessModes }}
+                {{- if $accessModes }}
+                accessModes:
+                  {{- toYaml $accessModes | nindent 18 }}
+                {{- end }}
                 resources:
                   requests:
                     storage: {{ .Values.featureStore.services.registry.local.persistence.file.pvc.create.resources.requests.storage | quote }}
+                {{- with .Values.featureStore.services.registry.local.persistence.file.pvc.create.annotations }}
+                annotations:
+                  {{- toYaml . | nindent 18 }}
+                {{- end }}
               mountPath: {{ .Values.featureStore.services.registry.local.persistence.file.pvc.mountPath | quote }}
             {{- end }}
             {{- end }}
@@ -182,8 +217,9 @@ spec:
             type: {{ .Values.featureStore.services.registry.local.persistence.store.type | quote }}
             secretRef:
               name: {{ .Values.featureStore.services.registry.local.persistence.store.secretRef.name | quote }}
-              {{- with .Values.featureStore.services.registry.local.persistence.store.secretRef.key }}
-              key: {{ . | quote }}
+              {{- $secretKey := .Values.featureStore.services.registry.local.persistence.store.secretRef.key | default .Values.featureStore.services.registry.local.persistence.store.type }}
+              {{- if $secretKey }}
+              key: {{ $secretKey | quote }}
               {{- end }}
           {{- end }}
         {{- end }}

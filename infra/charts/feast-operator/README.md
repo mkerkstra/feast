@@ -175,6 +175,8 @@ The following table lists the main configurable parameters of the Feast Operator
 | `namePrefix` | Resource name prefix (matches kustomize) | `feast-operator-` |
 | `metrics.enabled` | Enable metrics service | `true` |
 | `prometheus.serviceMonitor.enabled` | Create ServiceMonitor for Prometheus | `false` |
+| `storage.defaultStorageClass` | Default storage class for all PVCs | `""` |
+| `storage.defaultAccessModes` | Default access modes for PVCs | `["ReadWriteOnce"]` |
 
 ### FeatureStore Configuration
 
@@ -207,6 +209,16 @@ This chart can optionally deploy example FeatureStore custom resources. The conf
 - **AWS Lambda**: Serverless compute
 - **Ray**: Distributed Python compute
 - **Snowflake**: In-database transformations
+
+#### 💾 Storage Configuration
+- **Storage Classes**: Global default or per-service storage class configuration
+- **Access Modes**: Configurable PVC access modes with sensible defaults
+- **Annotations**: Support for storage-specific annotations (backup policies, etc)
+
+#### 🔐 Secret Management
+- **Smart Defaults**: SecretRef keys automatically default to store type if not specified
+- **Flexible Secrets**: Support for multi-key secrets (e.g., separate `postgres`, `sql` keys)
+- **Environment Variables**: Integration with existing secret management systems
 
 ### Example Configurations
 
@@ -274,6 +286,64 @@ featureStore:
       enabled: true
     ui:
       enabled: true
+```
+
+#### Production with Custom Storage Class
+```yaml
+storage:
+  defaultStorageClass: "fast-ssd"
+  defaultAccessModes:
+    - ReadWriteOnce
+
+featureStore:
+  enabled: true
+  services:
+    onlineStore:
+      enabled: true
+      persistence:
+        file:
+          enabled: true
+          pvc:
+            create:
+              enabled: true
+              # Inherits "fast-ssd" storage class
+              resources:
+                requests:
+                  storage: "100Gi"
+              annotations:
+                backup.policy: "daily"
+```
+
+#### Multi-Database Configuration with Smart SecretRefs
+```yaml
+featureStore:
+  enabled: true
+  services:
+    onlineStore:
+      persistence:
+        store:
+          enabled: true
+          type: "postgres"
+          secretRef:
+            name: "feast-stores"
+            # key defaults to "postgres" (the store type)
+    offlineStore:
+      persistence:
+        store:
+          enabled: true
+          type: "bigquery"
+          secretRef:
+            name: "feast-stores"
+            # key defaults to "bigquery"
+    registry:
+      local:
+        persistence:
+          store:
+            enabled: true
+            type: "sql"
+            secretRef:
+              name: "feast-stores"
+              # key defaults to "sql"
 ```
 
 For complete configuration options, see the [values.yaml](./values.yaml) file.
