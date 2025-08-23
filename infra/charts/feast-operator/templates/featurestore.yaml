@@ -91,43 +91,45 @@ spec:
           {{- toYaml . | nindent 10 }}
           {{- end }}
       {{- end }}
-      {{- if or $config.services.onlineStore.persistence.file.enabled $config.services.onlineStore.persistence.store.enabled $config.quickStart.withPersistence }}
+      {{- $p := $config.services.onlineStore.persistence | default dict }}
+      {{- $withPersistence := and $config.quickStart $config.quickStart.withPersistence }}
+      {{- if or (and $p.file $p.file.enabled) (and $p.store $p.store.enabled) $withPersistence }}
       persistence:
-        {{- if or $config.services.onlineStore.persistence.file.enabled $config.quickStart.withPersistence }}
+        {{- if or (and $p.file $p.file.enabled) $withPersistence }}
         file:
-          path: {{ $config.services.onlineStore.persistence.file.path | default "online_store.db" | quote }}
-          {{- if or $config.services.onlineStore.persistence.file.pvc.create.enabled $config.quickStart.withPersistence }}
+          path: {{ (and $p.file $p.file.path) | default "online_store.db" | quote }}
+          {{- if or (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.enabled) $withPersistence }}
           pvc:
-            {{- if $config.services.onlineStore.persistence.file.pvc.ref.name }}
+            {{- if and $p.file $p.file.pvc $p.file.pvc.ref $p.file.pvc.ref.name }}
             ref:
-              name: {{ $config.services.onlineStore.persistence.file.pvc.ref.name | quote }}
+              name: {{ $p.file.pvc.ref.name | quote }}
             {{- else }}
             create:
-              {{- $storageClass := $config.services.onlineStore.persistence.file.pvc.create.storageClassName | default $.Values.storage.defaultStorageClass }}
+              {{- $storageClass := (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.storageClassName) | default $.Values.storage.defaultStorageClass }}
               {{- if $storageClass }}
               storageClassName: {{ $storageClass | quote }}
               {{- end }}
-              {{- $accessModes := $config.services.onlineStore.persistence.file.pvc.create.accessModes | default $.Values.storage.defaultAccessModes }}
+              {{- $accessModes := (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.accessModes) | default $.Values.storage.defaultAccessModes }}
               {{- if $accessModes }}
               accessModes:
                 {{- toYaml $accessModes | nindent 16 }}
               {{- end }}
               resources:
                 requests:
-                  storage: {{ $config.services.onlineStore.persistence.file.pvc.create.resources.requests.storage | default "5Gi" | quote }}
-              {{- with $config.services.onlineStore.persistence.file.pvc.create.annotations }}
+                  storage: {{ (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.resources $p.file.pvc.create.resources.requests $p.file.pvc.create.resources.requests.storage) | default "5Gi" | quote }}
+              {{- with (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.annotations) }}
               annotations:
                 {{- toYaml . | nindent 16 }}
               {{- end }}
             {{- end }}
-            mountPath: {{ $config.services.onlineStore.persistence.file.pvc.mountPath | default "/data/online" | quote }}
+            mountPath: {{ (and $p.file $p.file.pvc $p.file.pvc.mountPath) | default "/data/online" | quote }}
           {{- end }}
-        {{- else if $config.services.onlineStore.persistence.store.enabled }}
+        {{- else if and $p.store $p.store.enabled }}
         store:
-          type: {{ $config.services.onlineStore.persistence.store.type | quote }}
+          type: {{ $p.store.type | quote }}
           secretRef:
-            name: {{ $config.services.onlineStore.persistence.store.secretRef.name | quote }}
-            {{- $secretKey := $config.services.onlineStore.persistence.store.secretRef.key | default $config.services.onlineStore.persistence.store.type }}
+            name: {{ $p.store.secretRef.name | quote }}
+            {{- $secretKey := $p.store.secretRef.key | default $p.store.type }}
             {{- if $secretKey }}
             key: {{ $secretKey | quote }}
             {{- end }}
@@ -216,42 +218,44 @@ spec:
             disable: true
           {{- end }}
         {{- end }}
-        {{- if or $config.services.registry.local.persistence.file.enabled $config.services.registry.local.persistence.store.enabled $config.quickStart.withPersistence }}
+        {{- $p := $config.services.registry.local.persistence | default dict }}
+        {{- $withPersistence := and $config.quickStart $config.quickStart.withPersistence }}
+        {{- if or (and $p.file $p.file.enabled) (and $p.store $p.store.enabled) $withPersistence }}
         persistence:
-          {{- if or $config.services.registry.local.persistence.file.enabled $config.quickStart.withPersistence }}
+          {{- if or (and $p.file $p.file.enabled) $withPersistence }}
           file:
-            {{- if $config.services.registry.local.persistence.file.cloudPath }}
-            path: {{ $config.services.registry.local.persistence.file.cloudPath | quote }}
+            {{- if and $p.file $p.file.cloudPath }}
+            path: {{ $p.file.cloudPath | quote }}
             {{- else }}
-            path: {{ $config.services.registry.local.persistence.file.path | default "registry.db" | quote }}
-            {{- if $config.services.registry.local.persistence.file.pvc.create.enabled }}
+            path: {{ (and $p.file $p.file.path) | default "registry.db" | quote }}
+            {{- if and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.enabled }}
             pvc:
               create:
-                {{- $storageClass := $config.services.registry.local.persistence.file.pvc.create.storageClassName | default $.Values.storage.defaultStorageClass }}
+                {{- $storageClass := (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.storageClassName) | default $.Values.storage.defaultStorageClass }}
                 {{- if $storageClass }}
                 storageClassName: {{ $storageClass | quote }}
                 {{- end }}
-                {{- $accessModes := $config.services.registry.local.persistence.file.pvc.create.accessModes | default $.Values.storage.defaultAccessModes }}
+                {{- $accessModes := (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.accessModes) | default $.Values.storage.defaultAccessModes }}
                 {{- if $accessModes }}
                 accessModes:
                   {{- toYaml $accessModes | nindent 18 }}
                 {{- end }}
                 resources:
                   requests:
-                    storage: {{ $config.services.registry.local.persistence.file.pvc.create.resources.requests.storage | default "1Gi" | quote }}
-                {{- with $config.services.registry.local.persistence.file.pvc.create.annotations }}
+                    storage: {{ (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.resources $p.file.pvc.create.resources.requests $p.file.pvc.create.resources.requests.storage) | default "1Gi" | quote }}
+                {{- with (and $p.file $p.file.pvc $p.file.pvc.create $p.file.pvc.create.annotations) }}
                 annotations:
                   {{- toYaml . | nindent 18 }}
                 {{- end }}
-              mountPath: {{ $config.services.registry.local.persistence.file.pvc.mountPath | default "/data/registry" | quote }}
+              mountPath: {{ (and $p.file $p.file.pvc $p.file.pvc.mountPath) | default "/data/registry" | quote }}
             {{- end }}
             {{- end }}
-          {{- else if $config.services.registry.local.persistence.store.enabled }}
+          {{- else if and $p.store $p.store.enabled }}
           store:
-            type: {{ $config.services.registry.local.persistence.store.type | quote }}
+            type: {{ $p.store.type | quote }}
             secretRef:
-              name: {{ $config.services.registry.local.persistence.store.secretRef.name | quote }}
-              {{- $secretKey := $config.services.registry.local.persistence.store.secretRef.key | default $config.services.registry.local.persistence.store.type }}
+              name: {{ $p.store.secretRef.name | quote }}
+              {{- $secretKey := $p.store.secretRef.key | default $p.store.type }}
               {{- if $secretKey }}
               key: {{ $secretKey | quote }}
               {{- end }}
@@ -316,20 +320,20 @@ spec:
     {{- end }}
   {{- end }}
   
-  {{- if or $config.authz.kubernetes.enabled $config.authz.oidc.enabled }}
+  {{- if and $config.authz (or (and $config.authz.kubernetes $config.authz.kubernetes.enabled) (and $config.authz.oidc $config.authz.oidc.enabled)) }}
   authz:
-    {{- if $config.authz.kubernetes.enabled }}
+    {{- if and $config.authz.kubernetes $config.authz.kubernetes.enabled }}
     kubernetes:
       secretRef:
         name: {{ $config.authz.kubernetes.secretRef.name | quote }}
-    {{- else if $config.authz.oidc.enabled }}
+    {{- else if and $config.authz.oidc $config.authz.oidc.enabled }}
     oidc:
       secretRef:
         name: {{ $config.authz.oidc.secretRef.name | quote }}
     {{- end }}
   {{- end }}
   
-  {{- if $config.cronJob.enabled }}
+  {{- if and $config.cronJob $config.cronJob.enabled }}
   cronJob:
     schedule: {{ $config.cronJob.schedule | default "0 */6 * * *" | quote }}
     {{- with $config.cronJob.timeZone }}
@@ -360,8 +364,8 @@ spec:
     {{- end }}
   {{- end }}
   
-  {{- with $config.config.custom }}
-  {{- toYaml . | nindent 2 }}
+  {{- if and $config.config $config.config.custom }}
+  {{- toYaml $config.config.custom | nindent 2 }}
   {{- end }}
 {{- end }}
 {{- end }}

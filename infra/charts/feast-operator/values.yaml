@@ -252,7 +252,7 @@ featureStores:
   
   # FeatureStore configurations (object-based for easier Helm overrides)
   sample:
-    enabled: true  # Enable this specific FeatureStore
+    enabled: false  # Enable this specific FeatureStore
     feastProject: "my_project"
     
     # TLS configuration for this FeatureStore

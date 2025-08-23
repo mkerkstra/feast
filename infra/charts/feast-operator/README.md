@@ -583,7 +583,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](https:
 ## 🆘 Support
 
 - 📖 [Documentation](https://docs.feast.dev/)
-- 💬 [Community Slack](https://join.slack.com/t/feastopensource/shared_invite/zt-1jw6dcmgt-8LCPn8T5XVHWYb~R~VG2BA)
+- 💬 [Community Slack](https://communityinviter.com/apps/feastopensource/feast-the-open-source-feature-store)
 - 🐛 [GitHub Issues](https://github.com/feast-dev/feast/issues)
 - 📧 [Mailing List](https://groups.google.com/g/feast-discuss)
 
